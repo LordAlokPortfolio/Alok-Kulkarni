@@ -384,6 +384,82 @@
     uploaded anywhere. Open the link and they work.</p>
 </div>
 
+<h2>Measuring things with a phone</h2>
+<p class="caption">Small instruments, built out of curiosity. No employer, no client, nothing to
+  sell. They run in Scriptable on an iPhone.</p>
+
+<div class="item">
+  <h3>Deriving the radius of the Earth</h3>
+  <p class="hook">A car odometer and two GPS readings are enough to measure the size of the
+    planet. The arithmetic is the easy part. Not cheating is the hard part.</p>
+  <p class="meta">JavaScript · Scriptable on iOS</p>
+  <p>The radius falls out of one division: how far you drove, divided by the angle between your
+    start and end points as seen from the centre of the Earth. The distance comes off the car's
+    odometer. The angle comes from the two GPS positions by trigonometry alone.</p>
+  <p>The obvious convenience is to let the phone compute the distance between the two points
+    instead of reading the odometer. I took that option out. The standard formula for it needs a
+    value for the Earth's radius in order to return kilometres, so using it would quietly feed
+    the answer back into the measurement. The odometer is the only distance source that does not
+    already know how big the Earth is.</p>
+  <p>Every result carries an uncertainty, combining the odometer's resolution with GPS error, and
+    results are averaged with more weight given to straighter drives, since a winding road adds
+    distance without adding angle.</p>
+  <p class="note"><b>The part I would defend hardest.</b> The accepted figure of 6371 km is not
+    shown while you are collecting. It appears only in a separate review mode, and only after
+    five runs. If you can see the right answer while measuring, you will stop when you land near
+    it and keep going when you do not, without ever deciding to. Hiding it costs nothing and
+    removes the temptation completely.</p>
+</div>
+
+<div class="item">
+  <h3>Height of a roadside pole, from a moving car</h3>
+  <p class="hook">Two photographs, taken a hundred metres apart, are enough to measure something
+    you never stop for.</p>
+  <p class="meta">JavaScript · Scriptable on iOS</p>
+  <p>Photograph the pole, let the car travel, photograph it again. The two GPS positions give the
+    distance between the shots. Tapping the top of the pole in each photo gives two angles.
+    Where the pole stands, and how tall it is, follow from those.</p>
+  <p>The useful part is that the height is worked out twice, once from each photograph, and the
+    two answers are compared. If they disagree by much the result is marked poor and asks for a
+    retake. It also checks whether your second tap sits where the first photo predicts the pole
+    should appear, and warns you when it looks like you tapped a different pole.</p>
+  <p class="note"><b>Limits.</b> The camera's field of view and the phone's height above the road
+    are fixed numbers for one phone in one seat, so it is calibrated for my car and nothing else.
+    It has never been checked against a pole of known height, which is the obvious next step and
+    the thing that would turn a plausible number into a verified one.</p>
+</div>
+
+<div class="item">
+  <h3>Road data nobody is collecting</h3>
+  <p class="hook">Two field recorders for things that exist on the road and in no database.</p>
+  <p class="meta">JavaScript · Scriptable on iOS · Siri</p>
+  <p>One logs wildlife killed on Ontario highways, with the intent of building a dataset worth
+    handing to the ministry or to a road ecology group. The other records where the highway has
+    tourism signage and where a town goes past with none at all.</p>
+  <p>Both are shaped by one constraint: you are driving. The wildlife one can be triggered by
+    voice, so you say the animal, it captures position and time and speaks a confirmation back,
+    and your eyes never leave the road. A record still saves when the lookup that turns
+    coordinates into a place name fails, because losing the sighting would be worse than storing
+    it without a town.</p>
+  <p class="note"><b>Collecting, not analysed.</b> Both are still gathering records. Neither has
+    produced a finding, and neither has been sent to anyone.</p>
+</div>
+
+<div class="item">
+  <h3>Turn by turn for a car without it</h3>
+  <p class="hook">My car has no built in navigation, so the phone has to be readable at a glance
+    instead of studied.</p>
+  <p class="meta">JavaScript · Scriptable on iOS · Mapbox</p>
+  <p>A large plain display that shows one thing at a time: the next turn, the lane, the speed
+    limit, the arrival time. It cycles through them every few seconds, and stops cycling once a
+    turn is within 600 metres, holding the turn on screen until it is done. When a decision is
+    coming, nothing else should be competing for the glance. It also runs on a built in test
+    route with no key, so it can be tried without setting anything up.</p>
+  <p class="note"><b>Found while writing this up.</b> The arrival time is calculated from a fixed
+    50 km/h that belongs to the test simulation, and it is used in live mode too. So the ETA is
+    not based on how fast you are actually driving. Not fixed yet.</p>
+</div>
+
 <h2>Outside work</h2>
 <p class="caption">Side projects, listed for completeness rather than as evidence. Several are
   unfinished and I have said where each one stops. Some are being worked on now, so these will
