@@ -344,6 +344,24 @@
   move.</p>
 
 <div class="item">
+  <h3>Payroll rate extractor</h3>
+  <p class="meta">JavaScript · runs from a browser bookmark</p>
+  <p>My wife is an accountant. Her firm runs payroll for several care homes through a payroll
+    website, and that website shows each employee's pay rate on screen but leaves it out of
+    every file it will let you export. So every pay period somebody sat and re-typed numbers
+    the system was already displaying. I wrote a small tool that reads those figures straight
+    off the page as it is shown and saves them as a spreadsheet.</p>
+  <p>The awkward part was the paging. The list is split across many pages and the site reloads
+    completely every time you move to the next one, which throws away anything a tool is
+    holding on to. So it saves what it has found after each page, builds the spreadsheet only
+    once at the end, and then wipes its own store, so one pay period cannot quietly leak into
+    the next one.</p>
+  <p><b>Not adopted. She checked its output against the real figures and it was right, and the
+    firm decided not to use it. I wrote it for free, because it was making her days longer,
+    not as a job.</b></p>
+</div>
+
+<div class="item">
   <h3>My Evil Diary</h3>
   <p class="meta">Python, standard library only · JavaScript · Web Crypto</p>
   <p>A horror fiction writing surface with no text box and no send button. The whole page is
