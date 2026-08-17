@@ -4,392 +4,366 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Alok Kulkarni</title>
-<meta name="description" content="Mechanical engineer working in manufacturing supply chain. I build cutting optimizers, inventory validators, consumption forecasts and floor apps.">
+<meta name="description" content="Mechanical engineer working in manufacturing supply chain. I build cutting optimizers, inventory systems, consumption forecasts and shop floor tools.">
 <style>
   :root {
-    --bg: #ffffff;
-    --fg: #16181d;
-    --muted: #5c626e;
-    --faint: #8a909c;
-    --rule: #e2e5ea;
-    --accent: #1a4fa0;
-    --mark-bg: #fff3cd;
-    --mark-fg: #7a5b00;
-    --code-bg: #f4f6f8;
+    --bg:#fff; --fg:#1a1c20; --muted:#565c67; --faint:#8b919c;
+    --rule:#e4e7ec; --accent:#1550a8; --panel:#f6f8fa;
+    --flag-bg:#fff8e1; --flag-fg:#7a5a00; --flag-br:#e8c96a;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #14161a;
-      --fg: #e6e8ec;
-      --muted: #a2a8b4;
-      --faint: #767d8a;
-      --rule: #2a2e36;
-      --accent: #7aa7ee;
-      --mark-bg: #4a3a00;
-      --mark-fg: #ffd970;
-      --code-bg: #1c1f25;
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme=light]){
+      --bg:#131519; --fg:#e8eaee; --muted:#a8aeb9; --faint:#737a86;
+      --rule:#282c34; --accent:#82adf0; --panel:#1a1d23;
+      --flag-bg:#3d2f00; --flag-fg:#ffd970; --flag-br:#6b5410;
     }
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--fg);
-    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
   }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 64px 24px 96px; }
-  a { color: var(--accent); }
-  h1 { font-size: 30px; letter-spacing: -0.01em; margin: 0 0 6px; }
-  .tagline { font-size: 19px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 18px; }
-  .contact { font-size: 14px; color: var(--muted); margin: 0 0 40px; }
-  .contact a { margin-right: 14px; white-space: nowrap; }
-  .intro { font-size: 17px; margin: 0 0 12px; }
-  h2 {
-    font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em;
-    color: var(--faint); font-weight: 600;
-    margin: 52px 0 20px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+  .wrap{max-width:660px;margin:0 auto;padding:80px 26px 120px}
+  a{color:var(--accent)}
+
+  header{margin-bottom:56px}
+  h1{font-size:34px;letter-spacing:-.02em;margin:0 0 10px;font-weight:650}
+  .lead{font-size:21px;line-height:1.45;margin:0 0 22px;font-weight:450}
+  .contact{font-size:15px;color:var(--muted);margin:0;display:flex;flex-wrap:wrap;gap:18px}
+
+  .intro{font-size:18px;margin:0 0 16px}
+  .intro:last-of-type{margin-bottom:0}
+
+  h2{
+    font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);
+    font-weight:650;margin:72px 0 8px;padding-bottom:10px;border-bottom:1px solid var(--rule);
   }
-  h3 { font-size: 17px; margin: 0 0 3px; }
-  .meta {
-    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    color: var(--faint); margin: 0 0 12px;
+  h2 + .caption{font-size:15px;color:var(--muted);margin:0 0 32px}
+
+  .item{margin:36px 0 0;padding-top:0}
+  .item + .item{margin-top:46px}
+  h3{font-size:20px;margin:0 0 6px;font-weight:600;letter-spacing:-.01em}
+  .hook{font-size:18px;margin:0 0 10px}
+  .meta{
+    font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:var(--faint);margin:0 0 16px;
   }
-  .item { margin: 0 0 38px; }
-  .item:last-child { margin-bottom: 0; }
-  .item p { margin: 0 0 10px; }
-  .lbl {
-    font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    letter-spacing: 0.07em; color: var(--faint); text-transform: uppercase;
-    display: inline-block; min-width: 62px; margin-right: 4px;
+  .item p{margin:0 0 14px}
+  .item p:last-child{margin-bottom:0}
+  ul{margin:0 0 14px;padding-left:22px}
+  li{margin-bottom:7px}
+
+  .note{
+    font-size:15.5px;line-height:1.6;color:var(--muted);
+    border-left:2px solid var(--rule);padding:2px 0 2px 16px;margin:16px 0 0;
   }
-  ul { margin: 0 0 10px; padding-left: 20px; }
-  li { margin-bottom: 5px; }
-  .role { margin: 0 0 26px; }
-  .role .meta { margin-bottom: 7px; }
-  .skills p { margin: 0 0 10px; }
-  .skills b { font-weight: 600; }
-  code {
-    font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    background: var(--code-bg); padding: 1px 5px; border-radius: 3px;
+  .note b{color:var(--fg);font-weight:600}
+
+  .demo{display:block;margin:0 0 18px;text-decoration:none}
+  .demo span{
+    display:inline-block;background:var(--accent);color:#fff;
+    font-size:16px;font-weight:600;padding:11px 20px;border-radius:6px;
   }
-  mark {
-    background: var(--mark-bg); color: var(--mark-fg);
-    padding: 1px 6px; border-radius: 3px; font-weight: 600;
+  .demo small{display:block;font-size:14px;color:var(--faint);margin-top:9px}
+  .demo:hover span{filter:brightness(1.12)}
+
+  .role{margin:0 0 30px}
+  .role h3{font-size:18px;margin-bottom:3px}
+  .role .meta{margin-bottom:9px}
+
+  code{
+    font:14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    background:var(--panel);padding:1px 6px;border-radius:4px;
   }
-  .demo {
-    margin: 0 0 14px; padding: 13px 16px;
-    border: 1px solid var(--rule); border-left: 3px solid var(--accent);
-    border-radius: 4px; background: var(--code-bg);
+  .flag{
+    display:block;background:var(--flag-bg);color:var(--flag-fg);
+    border:1px dashed var(--flag-br);border-radius:5px;
+    padding:9px 13px;margin:10px 0;font-size:15px;font-weight:600;
   }
-  .demo a { font-weight: 600; font-size: 17px; text-decoration: none; }
-  .demo a:hover { text-decoration: underline; }
-  .demo span {
-    display: block; font-size: 13px; color: var(--faint); margin-top: 2px;
-  }
-  .note { color: var(--muted); font-size: 15px; }
-  @media (max-width: 600px) {
-    .wrap { padding: 40px 20px 64px; }
-    h1 { font-size: 26px; }
-    .contact a { display: block; margin: 0 0 5px; }
+  .skills p{margin:0 0 16px}
+  .skills b{display:block;font-size:15px;margin-bottom:2px}
+
+  @media (max-width:600px){
+    body{font-size:16px}
+    .wrap{padding:48px 20px 80px}
+    h1{font-size:29px} .lead{font-size:19px}
+    .contact{gap:8px 16px}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
 
+<header>
   <h1>Alok Kulkarni</h1>
-  <p class="tagline">I build software that runs manufacturing supply chains.</p>
-  <p class="sub">Mechanical engineer. Seven years in manufacturing and procurement.</p>
+  <p class="lead">I build software that runs manufacturing supply chains.</p>
   <p class="contact">
     <a href="mailto:alokhk24@gmail.com">alokhk24@gmail.com</a>
     <a href="https://www.linkedin.com/in/alok-kulkarni-154790b4">LinkedIn</a>
     <a href="https://github.com/LordAlokPortfolio">GitHub</a>
     <span>North York, Ontario</span>
   </p>
+</header>
 
-  <p class="intro">
-    I spent three and a half years as a manufacturing engineer designing assembly
-    lines and running time studies, then moved into procurement. Both jobs ran on
-    spreadsheets that broke quietly and ERP screens nobody could get data out of.
-    I started writing the tools myself, and that is now most of what I do:
-    cutting optimizers, inventory validators, consumption forecasts, and apps
-    that run on a tablet bolted next to a machine.
-  </p>
-  <p class="note">
-    Most of this runs inside a manufacturing plant and cannot be published. The
-    code stays where it is; the descriptions are specific about approach and
-    result. Where a number is here, I say how it was measured. Where something
-    was not measured, or is still a guess, I say that instead.
-  </p>
+<p class="intro">
+  Three and a half years as a manufacturing engineer designing assembly lines and
+  running time studies, then into procurement. Both jobs ran on spreadsheets that
+  broke quietly and ERP screens nobody could get data out of. I started writing the
+  tools myself, and that is now most of what I do.
+</p>
+<p class="intro">
+  Most of it runs inside a plant and cannot be published. Where a number appears
+  below, I say how it was measured. Where something was not measured, I say that
+  instead.
+</p>
 
-  <h2>Start here</h2>
+<h2>Try this first</h2>
+<p class="caption">The one thing here you can open and use in ten seconds.</p>
 
-  <div class="item">
-    <h3>Inventory Database</h3>
-    <p class="meta">Office Scripts (TypeScript) · Excel on the web · static HTML and JS demo</p>
-    <p class="demo">
-      <a href="https://lordalokportfolio.github.io/inventory-database/">Click through the live demo</a>
-      <span>no install, no signup, works on a phone</span>
-    </p>
-    <p>A full material flow for a small manufacturer, running inside a single Excel workbook:
-      raise a purchase order, print or email it to the supplier, receive it into stock, move it
-      to the production floor, record what was actually consumed, ship finished goods, and log
-      every movement with a timestamp.</p>
-    <p><span class="lbl">The part
-      that matters</span> The reorder alert is not a threshold check. It flags any product that,
-      at its recorded average daily usage, will run out <em>before a purchase order placed today
-      could physically arrive</em>, measured against that supplier's lead time. Products with an
-      order already in flight are excluded so the list stays actionable. That is the difference
-      between an alert people act on and an alert people learn to ignore.</p>
-    <p><span class="lbl">Also</span> Moving material to production and consuming it are separate
-      actions, because they are separate events. Stock leaving the stock room is relocated, not
-      spent; it comes off the books when it is used. Collapsing those two into one is the usual
-      shortcut and it is why work-in-progress goes missing.</p>
-    <p><span class="lbl">Shipped as</span> Two deliberately different implementations. The browser
-      demo is stateless and resets on refresh, and says so on the page. The Office Scripts are the
-      real tool and write to the workbook permanently. The demo generates a PDF in-browser;
-      the Office Script version fills a print-ready sheet and hands off to Excel's own export,
-      because Office Scripts cannot produce a PDF or send mail and pretending otherwise would
-      just break for whoever tried it.</p>
-    <p><span class="lbl">Written for</span> Someone who rarely touches a computer. The page is a
-      numbered walkthrough, step one through seven, in plain language.</p>
-    <p><span class="lbl">Found in
-      review</span> <code>CreatePO</code> was numbering orders from the open-PO row count, which
-      assumes rows are only ever appended. Delete one tidied-up closed order and the next PO is
-      issued a number already sitting in the log. It had never fired, because receiving marks rows
-      closed instead of deleting them, so the count only ever grew. It would have fired the first
-      time someone cleaned up the sheet by hand. Now derived from the highest existing PO number,
-      skipping anything that does not match the expected shape. Worth recording because the
-      browser demo had always done this correctly with a plain counter, and because it is the same
-      row-position-as-identity mistake described two sections below, in code I had written myself
-      after finding it in someone else's.</p>
-  </div>
+<div class="item">
+  <h3>Inventory Database</h3>
+  <p class="hook">A small manufacturer's entire material flow, running inside one Excel
+    workbook. Free, and the code is public.</p>
+  <p class="meta">Office Scripts (TypeScript) · Excel on the web · static HTML demo</p>
+  <a class="demo" href="https://lordalokportfolio.github.io/inventory-database/">
+    <span>Open the live demo</span>
+    <small>No install, no signup. Works on a phone.</small>
+  </a>
+  <p>Raise a purchase order, email it to the supplier, receive it into stock, move it
+    to the production floor, record what was actually consumed, ship the finished goods.
+    Every movement timestamped.</p>
+  <p>The reorder alert is the part worth looking at. It does not check whether stock
+    sits below a minimum. It checks whether a product will run out <em>before an order
+    placed today could physically arrive</em>, measuring its recorded daily usage against
+    that supplier's lead time, and it drops anything already on order. That is the
+    difference between an alert people act on and one they learn to ignore.</p>
+  <p>Moving material to production and consuming it are separate actions, because they
+    are separate events. Stock leaving the stock room is relocated, not spent. Collapsing
+    those two is the usual shortcut and it is why work in progress goes missing.</p>
+  <p class="note"><b>Found in review.</b> <code>CreatePO</code> numbered orders from the
+    open-PO row count, so deleting one tidied-up closed row would reissue a number already
+    in the log. It had never fired, because receiving closes rows rather than deleting
+    them. Fixed. It is the same row-position-as-identity mistake I had caught in someone
+    else's code, further down this page, and then written into my own.</p>
+</div>
 
-  <h2>Selected work</h2>
-  <p class="note">Runs inside a manufacturing plant. Not publishable, so take these as described
-    rather than demonstrated.</p>
+<h2>Work</h2>
+<p class="caption">Runs inside a manufacturing plant. Not publishable, so take these as
+  described rather than demonstrated.</p>
 
-  <div class="item">
-    <h3>Cutting stock optimizer, extrusion</h3>
-    <p class="meta">Python (first-fit-decreasing packing) · SQLite · Tkinter · xlrd</p>
-    <p><span class="lbl">Problem</span> Extrusion profiles were cut order line by order line against
-      192 inch stock bars. No packing logic, no reuse of offcuts. Every remnant became scrap.</p>
-    <p><span class="lbl">Built</span> First-fit-decreasing bin packing over the order set, plus a
-      SQLite remnant registry so an offcut created in one run is available to the next, plus a
-      Tkinter app the cutters use at the saw.</p>
-    <p><span class="lbl">Result</span> Tested against real production orders. A two-run test
-      confirmed a remnant created in run one was correctly found and consumed in run two.
-      Production reports turned out to be <code>.xls</code>, not the CSV I had been testing
-      against, so I added native <code>.xls</code> ingestion rather than ask anyone on the floor
-      to change how they export.</p>
-    <p><span class="lbl">Status</span> Optimizer and remnant registry verified against production
-      data. Floor app decision logic covered by automated tests; the GUI has not yet been run
-      at the saw.</p>
-    <p><span class="lbl">Unproven</span> I do not have a measured waste reduction. The packing is
-      demonstrably tighter per order than cutting line by line, and remnants that used to be
-      scrapped now come back, but whether that shows up in monthly scrap tonnage has not been
-      checked against a pre-optimizer baseline. That is the number that actually matters and I
-      have not earned it yet.</p>
-  </div>
+<div class="item">
+  <h3>Cutting stock optimizer</h3>
+  <p class="hook">Extrusion profiles were cut order line by order line against 192 inch
+    bars. No packing logic, and every offcut became scrap.</p>
+  <p class="meta">Python · first-fit-decreasing packing · SQLite · Tkinter</p>
+  <p>Bin packing across the whole order set instead of one line at a time, plus a SQLite
+    remnant registry so an offcut created in one run is found and used by the next, plus
+    a Tkinter app the cutters run at the saw.</p>
+  <p>Production reports turned out to be <code>.xls</code>, not the CSV I had been testing
+    against, so I added native <code>.xls</code> reading rather than ask the floor to change
+    how they export.</p>
+  <p class="note"><b>Unproven.</b> I have no measured waste reduction. The packing is
+    demonstrably tighter and remnants that used to be scrapped now come back, but whether
+    that shows up in monthly scrap tonnage has not been checked against a baseline. That is
+    the number that matters and I have not earned it yet. The floor app's logic is covered
+    by tests; its GUI has not been run at the saw.</p>
+</div>
 
-  <div class="item">
-    <h3>Cycle count validation, rebuilt</h3>
-    <p class="meta">Office Scripts (TypeScript) · Excel · OneDrive</p>
-    <p><span class="lbl">Problem</span> The script reconciling daily cycle counts had been running
-      for a long time. It was wrong in four ways, all of them silent.</p>
-    <ul>
-      <li>A dead fraction parser read <code>"1/2"</code> as <code>1</code>. Half counts were being
-        rounded up with no warning.</li>
-      <li>Validation ran in one direction only, so shrinkage and missed pulls never surfaced.</li>
-      <li>Batch IDs were recomputed per row, which split a single count session in two whenever
-        it crossed a second boundary.</li>
-      <li>A crash window let a re-run duplicate rows that were already committed.</li>
-    </ul>
-    <p><span class="lbl">Built</span> Rebuilt the reconciliation around an immutable row key
-      (ID + BATCHTIME + TYPE). The previous version keyed on row numbers, which drift as history
-      grows, so a correction written today could land on a row counted last month.</p>
-    <p><span class="lbl">Result</span> Split into three scripts (setup, validate, push) so the job
-      could be handed to five people across purchasing, production control and receiving, and run
-      for two weeks without me.</p>
-    <p><span class="lbl">Unknown</span> How long those four bugs had been running, and how much
-      count drift they put into the records before I found them. All four failed silently, which
-      is why they lasted. I did not go back and quantify the damage.</p>
-  </div>
+<div class="item">
+  <h3>Cycle count validation, rebuilt</h3>
+  <p class="hook">The script reconciling daily counts had been trusted for a long time. It
+    was wrong in four ways, all of them silent.</p>
+  <p class="meta">Office Scripts (TypeScript) · Excel · OneDrive</p>
+  <ul>
+    <li>A dead fraction parser read <code>"1/2"</code> as <code>1</code>, rounding every
+      half count up with no warning.</li>
+    <li>Validation ran one direction only, so shrinkage and missed pulls never surfaced.</li>
+    <li>Batch IDs were recomputed per row, splitting one count session in two whenever it
+      crossed a second boundary.</li>
+    <li>A crash window let a re-run duplicate rows already committed.</li>
+  </ul>
+  <p>Rebuilt around an immutable key of ID plus batch time plus type. The old version keyed
+    on row numbers, which drift as history grows, so a correction written today could land
+    on a row counted last month. Then split into three scripts so the job could be handed to
+    five people across purchasing, production control and receiving, and run for two weeks
+    without me.</p>
+  <p class="note"><b>Unknown.</b> How long those four bugs had been running, and how much
+    count drift they left in the records. All four failed silently, which is why they lasted.
+    I did not go back and quantify the damage.</p>
+</div>
 
-  <div class="item">
-    <h3>Glass defect tracking</h3>
-    <p class="meta">Streamlit (abandoned) · receiving-bay observation</p>
-    <p><span class="lbl">Problem</span> Glass arrived damaged often enough to matter, and we had
-      no evidence to put in front of the supplier's rep.</p>
-    <p><span class="lbl">Built</span> A Streamlit app to log defects visually at the moment of
-      detection. I abandoned it. The storage design did not scale the way I had built it, and the
-      glass department was not going to use a second screen during unloading.</p>
-    <p><span class="lbl">Result</span> The useful output came from standing at the receiving bay
-      instead. Sheets are fixed longitudinally on the delivery trucks but free laterally, so a
-      hard turn can load them edge on and start fractures that nobody sees until the glass is
-      cut. The replacement tracker is being built from the reorder emails, which already carry
-      damage photos, dates and quantities.</p>
-    <p><span class="lbl">Caveat</span> The transport idea is a hypothesis, not a finding. I have a
-      plausible mechanism and no evidence it is the cause. Testing it means instrumenting a
-      delivery, or at minimum correlating damage rates against route and load position, and
-      neither has happened. I am not going to call it a root cause until it survives that.</p>
-  </div>
+<div class="item">
+  <h3>Glass defect tracking</h3>
+  <p class="hook">Glass arrived damaged often enough to matter and we had no evidence to put
+    in front of the supplier.</p>
+  <p class="meta">Streamlit, abandoned · receiving bay observation</p>
+  <p>I built a Streamlit app to log defects at the moment of detection, then abandoned it.
+    The storage design did not scale the way I had built it, and the glass department was
+    never going to use a second screen mid-unload.</p>
+  <p>The useful output came from standing at the receiving bay instead. Sheets are fixed
+    longitudinally on the trucks but free laterally, so a hard turn can load them edge on and
+    start fractures nobody sees until the glass is cut. The replacement tracker is being built
+    from the reorder emails, which already carry photos, dates and quantities.</p>
+  <p class="note"><b>Caveat.</b> That is a hypothesis, not a finding. I have a plausible
+    mechanism and no evidence it is the cause. Testing it means correlating damage against
+    route and load position, and that has not happened. I am not calling it a root cause until
+    it survives that.</p>
+</div>
 
-  <div class="item">
-    <h3>CNC material consumption logging</h3>
-    <p class="meta">Standalone HTML · Android tablet at the machine</p>
-    <p><span class="lbl">Problem</span> Material pulled at the CNC was recorded on paper and keyed
-      in later, or not at all.</p>
-    <p><span class="lbl">Built</span> First attempt was a Power Automate flow. It failed in
-      practice. I replaced it with a single HTML file on an Android tablet mounted at the machine:
-      the operator taps the part, it logs. No install, no licence, no server.</p>
-    <p><span class="lbl">Result</span> It is still in use. That is the only measurement I have,
-      and for a floor tool it is not a trivial one, since anything the operators dislike gets
-      quietly abandoned inside a week. Whether the logged consumption is accurate enough to drive
-      reordering is a separate question I have not answered.</p>
-  </div>
+<div class="item">
+  <h3>CNC material logging</h3>
+  <p class="hook">Material pulled at the CNC was written on paper and keyed in later, or not
+    at all.</p>
+  <p class="meta">Standalone HTML · Android tablet at the machine</p>
+  <p>The first attempt was a Power Automate flow and it failed in practice. I replaced it with
+    a single HTML file on a tablet mounted at the machine. The operator taps the part, it logs.
+    No install, no licence, no server.</p>
+  <p class="note"><b>Measured by.</b> It is still in use, which is the only measurement I have.
+    For a floor tool that is not nothing, since anything the operators dislike gets quietly
+    abandoned inside a week. Whether the logged data is accurate enough to reorder from is a
+    separate question I have not answered.</p>
+</div>
 
-  <h2>Smaller tools</h2>
-  <p class="note">Real, in use, but not worth dressing up as case studies.</p>
+<h2>Smaller tools</h2>
+<p class="caption">Real and in use, but not worth dressing up.</p>
 
-  <div class="item">
-    <h3>Paint consumption forecasting</h3>
-    <p class="meta">Office Scripts (TypeScript) · Excel</p>
-    <p>Three scripts covering estimation, work-in-progress consumption and forward forecast for
-      the windows, patio and door departments. The intent is reordering against projected usage
-      rather than in response to a stockout. I have not measured whether stockouts actually
-      dropped.</p>
-  </div>
+<div class="item">
+  <h3>Paint consumption forecasting</h3>
+  <p class="meta">Office Scripts · Excel</p>
+  <p>Estimation, work in progress consumption, and forward forecast across the windows, patio
+    and door departments, so paint is ordered against projected usage rather than in response
+    to a stockout. I have not measured whether stockouts actually dropped.</p>
+</div>
 
-  <div class="item">
-    <h3>ERP extraction</h3>
-    <p class="meta">Python · Selenium</p>
-    <p>The DaVinci Web 360 portal is slow and drops sessions under normal use. Purchase order and
-      inventory data is pulled out of it on a schedule so downstream tools read a table instead
-      of a web page. Scraping a portal is the wrong long-term answer and I know it; the right one
-      is database or API access, which I do not have.</p>
-  </div>
+<div class="item">
+  <h3>ERP extraction</h3>
+  <p class="meta">Python · Selenium</p>
+  <p>The DaVinci Web 360 portal is slow and drops sessions, so purchase order and inventory
+    data is pulled out on a schedule and downstream tools read a table instead of a web page.
+    Scraping a portal is the wrong long term answer and I know it. The right one is database
+    access, which I do not have.</p>
+</div>
 
-  <div class="item">
-    <h3>Reorder points from receipt history</h3>
-    <p class="meta">Excel</p>
-    <p>Minimum stock levels rebuilt from actual receipt history rather than the figures already
-      sitting in the system, which nobody could source.</p>
-  </div>
+<div class="item">
+  <h3>Reorder points from receipt history</h3>
+  <p class="meta">Excel</p>
+  <p>Minimum stock levels rebuilt from actual receipt history rather than the numbers already
+    in the system, which nobody could source.</p>
+</div>
 
-  <div class="item">
-    <h3>Browser tools on GitHub Pages</h3>
-    <p class="meta">HTML · JavaScript</p>
-    <p>An NCR generator that outputs PDFs, a paint report reader, and a material transfer form.
-      Small, single purpose, no install.</p>
-  </div>
+<div class="item">
+  <h3>Browser tools</h3>
+  <p class="meta">HTML · JavaScript · GitHub Pages</p>
+  <p>An NCR generator that outputs PDFs, a paint report reader, and a material transfer form.
+    Single purpose, no install.</p>
+</div>
 
-  <h2>Public projects</h2>
+<h2>Outside work</h2>
 
-  <div class="item">
-    <h3><a href="https://github.com/LordAlokPortfolio/LordAlokPortfolio/tree/main/pet-tv-factory">Pet TV Factory</a></h3>
-    <p class="meta">Python · ffmpeg · GitHub Actions · pytest</p>
-    <p>Generates hour-long ambient video for pets left home alone. The interesting constraint is
-      encode cost. Encoding an hour of 1080p is expensive, so it builds one unique ten-minute
-      block with crossfades, then repeats it to full length losslessly through ffmpeg's concat
-      demuxer. An hour costs the same CPU as ten minutes.</p>
-    <p>Runs weekly on GitHub Actions. <code>--synthetic</code> mode lets CI pass with no API key,
-      <code>--seed</code> makes output reproducible, and the pure logic is covered by pytest with
-      no network or ffmpeg needed. Music selection follows published animal behaviour work (Wells
-      2002, Kogan 2012, Snowdon, Teie and Savage 2015) rather than guesswork, and is restricted to
-      CC0 audio because Content ID will flag an hour-long upload.</p>
-  </div>
+<div class="item">
+  <h3><a href="https://github.com/LordAlokPortfolio/LordAlokPortfolio/tree/main/pet-tv-factory">Pet TV Factory</a></h3>
+  <p class="hook">Hour long ambient video for pets left home alone. The interesting constraint
+    is encode cost.</p>
+  <p class="meta">Python · ffmpeg · GitHub Actions · pytest</p>
+  <p>Encoding an hour of 1080p is expensive, so it builds one unique ten minute block with
+    crossfades and repeats it to full length losslessly through ffmpeg's concat demuxer. An
+    hour costs the same CPU as ten minutes.</p>
+  <p>Runs weekly on GitHub Actions. A synthetic mode lets CI pass with no API key, a seed flag
+    makes output reproducible, and music selection follows published animal behaviour work
+    rather than guesswork, restricted to CC0 audio because Content ID will flag an hour long
+    upload.</p>
+</div>
 
-  <div class="item">
-    <h3>My Evil Diary</h3>
-    <p class="meta">Python (stdlib only) · JavaScript · Web Crypto</p>
-    <p>A horror fiction writing surface with no text box and no send button: the whole page is
-      ruled parchment and you write directly onto it, which means Apple Pencil Scribble works
-      natively on iPad.</p>
-    <p>The design problem was privacy. The passphrase is hashed client side with SHA-256 and only
-      the hash reaches the server, so there is no identity check to talk your way past, and no
-      way to recover a forgotten passphrase. Those are the same property, stated in both
-      directions, and the README says so instead of promising recovery it cannot deliver.</p>
-  </div>
+<div class="item">
+  <h3>My Evil Diary</h3>
+  <p class="hook">A horror fiction writing surface with no text box and no send button. The
+    whole page is ruled parchment and you write onto it, so Apple Pencil works natively.</p>
+  <p class="meta">Python, standard library only · JavaScript · Web Crypto</p>
+  <p>The real problem was privacy. The passphrase is hashed in the browser and only the hash
+    reaches the server, so there is no identity check to talk your way past and no way to
+    recover a forgotten passphrase. Those are the same property stated in both directions, and
+    the README says so rather than promising a recovery it cannot deliver.</p>
+</div>
 
-  <h2>Experience</h2>
+<h2>Experience</h2>
 
-  <div class="role">
-    <h3><mark>FILL IN: current title</mark></h3>
-    <p class="meta"><mark>FILL IN: company, city</mark> · <mark>FILL IN: start date</mark> to present</p>
-    <p>Everything in Selected work above.</p>
-  </div>
+<div class="role">
+  <h3>Current role</h3>
+  <p class="flag">FILL IN: title, company, city, start date</p>
+  <p>Everything under Work and Smaller tools above.</p>
+</div>
 
-  <div class="role">
-    <h3>Procurement Analyst</h3>
-    <p class="meta">Weber Manufacturing Technologies, Concord ON · Aug 2021 to <mark>FILL IN: end date</mark></p>
-    <ul>
-      <li>Ran about $13 million of material and equipment purchasing in a year. That figure
-        describes the plant's size, not my contribution, and I would rather say so than let it
-        sit there looking like an achievement.</li>
-      <li>The actual contribution was the inventory system underneath it, which I built, and
-        which is what kept stock levels from either ballooning or starving production.</li>
-      <li>Expedited raw material inside a week when production would otherwise have stopped.</li>
-    </ul>
-  </div>
+<div class="role">
+  <h3>Procurement Analyst</h3>
+  <p class="meta">Weber Manufacturing Technologies, Concord ON · Aug 2021 to <span class="flag" style="display:inline-block;margin:0;padding:2px 8px">FILL IN: end date</span></p>
+  <ul>
+    <li>Ran about $13 million of material and equipment purchasing in a year. That figure
+      describes the plant's size, not my contribution, and I would rather say so than let it
+      sit there looking like an achievement.</li>
+    <li>The contribution was the inventory system underneath it, which I built, and which kept
+      stock from either ballooning or starving production.</li>
+    <li>Expedited raw material inside a week when production would otherwise have stopped.</li>
+  </ul>
+</div>
 
-  <div class="role">
-    <h3>Manufacturing Engineer</h3>
-    <p class="meta">Forbes Marshall Pvt Ltd, Pune, India · Dec 2015 to Jul 2019</p>
-    <ul>
-      <li>Designed assembly lines and workstations.</li>
-      <li>Ran time studies and wrote the standard work instructions that came out of them.</li>
-      <li>Analysed production data to find bottlenecks and quality problems, and implemented the
-        fixes.</li>
-      <li><mark>FILL IN: the 15 percent efficiency claim. Measured how, over what period, and
-        which specific change of yours drove it. If you cannot answer that in an interview,
-        delete the number instead of defending it.</mark></li>
-    </ul>
-  </div>
+<div class="role">
+  <h3>Manufacturing Engineer</h3>
+  <p class="meta">Forbes Marshall Pvt Ltd, Pune, India · Dec 2015 to Jul 2019</p>
+  <ul>
+    <li>Designed assembly lines and workstations.</li>
+    <li>Ran time studies and wrote the standard work instructions that came out of them.</li>
+    <li>Analysed production data to find bottlenecks and quality problems, and implemented the
+      fixes.</li>
+  </ul>
+  <p class="flag">FILL IN: the 15 percent efficiency claim. Measured how, over what period,
+    and which change of yours drove it. If you cannot answer that in an interview, delete the
+    number rather than defend it.</p>
+</div>
 
-  <div class="role">
-    <h3>Customer Service Representative</h3>
-    <p class="meta">Walmart Canada, Toronto · Oct 2018 to Jul 2021</p>
-  </div>
+<div class="role">
+  <h3>Customer Service Representative</h3>
+  <p class="meta">Walmart Canada, Toronto · Oct 2018 to Jul 2021</p>
+</div>
 
-  <h2>Education</h2>
+<h2>Education</h2>
 
-  <div class="role">
-    <h3>Postgraduate Diploma, Business Analytics</h3>
-    <p class="meta">Seneca College, Toronto · 2020 to 2021 · President's Honour List</p>
-    <p>SAS, SAS Enterprise Miner, Tableau. Predictive modelling and text mining.</p>
-  </div>
+<div class="role">
+  <h3>Postgraduate Diploma, Business Analytics</h3>
+  <p class="meta">Seneca College, Toronto · 2020 to 2021 · President's Honour List</p>
+  <p>SAS, SAS Enterprise Miner, Tableau. Predictive modelling and text mining.</p>
+</div>
 
-  <div class="role">
-    <h3>Postgraduate Diploma, Supply Chain Management (Global)</h3>
-    <p class="meta">Conestoga College, Kitchener · 2019 to 2020</p>
-    <p>Material requirements planning, resource allocation, inventory strategy. SAP and Salesforce.</p>
-  </div>
+<div class="role">
+  <h3>Postgraduate Diploma, Supply Chain Management, Global</h3>
+  <p class="meta">Conestoga College, Kitchener · 2019 to 2020</p>
+  <p>Material requirements planning, resource allocation, inventory strategy. SAP, Salesforce.</p>
+</div>
 
-  <div class="role">
-    <h3>Bachelor of Engineering, Mechanical</h3>
-    <p class="meta">University of Mumbai · 2011 to 2015</p>
-    <p>Built and tested a formula car for SUPRA SAEINDIA. Final year project was a universal test
-      rig covering all motorcycle engine variants.</p>
-  </div>
+<div class="role">
+  <h3>Bachelor of Engineering, Mechanical</h3>
+  <p class="meta">University of Mumbai · 2011 to 2015</p>
+  <p>Built and tested a formula car for SUPRA SAEINDIA. Final year project was a universal test
+    rig covering all motorcycle engine variants.</p>
+</div>
 
-  <h2>Tools</h2>
-  <div class="skills">
-    <p><b>Built and shipped things with:</b> Python, TypeScript (Office Scripts), JavaScript,
-      SQL and SQLite, HTML and CSS, Selenium, ffmpeg, Git, GitHub Actions, Power Automate,
-      Excel including macro and Office Script automation</p>
-    <p><b>Used on one project each:</b> React (a housing affordability model), Tkinter (the
-      cutting floor app), Streamlit (the defect logger I abandoned)</p>
-    <p><b>Taught in coursework, not used in production:</b> SAP, SAS and SAS Enterprise Miner,
-      Tableau, Salesforce, Crystal Reports. These were diploma modules. I can read them and I
-      would need ramp-up time to be useful with them, and the distinction matters enough to
-      state plainly rather than list them next to the ones above.</p>
-    <p><b>Domain:</b> inventory control and cycle counting, demand and consumption forecasting,
-      procurement, cutting stock and bin packing, ERP integration, shop floor data capture,
-      supplier quality, time study and line balancing</p>
-  </div>
+<h2>Tools</h2>
+<div class="skills">
+  <p><b>Built and shipped things with</b>
+    Python, TypeScript via Office Scripts, JavaScript, SQL and SQLite, HTML and CSS, Selenium,
+    ffmpeg, Git, GitHub Actions, Power Automate, Excel including macro and Office Script
+    automation</p>
+  <p><b>Used on one project each</b>
+    React, Tkinter, Streamlit</p>
+  <p><b>Taught in coursework, not used in production</b>
+    SAP, SAS and SAS Enterprise Miner, Tableau, Salesforce, Crystal Reports. These were diploma
+    modules. I can read them and would need ramp up time to be useful with them, and the
+    distinction matters enough to state rather than blur.</p>
+  <p><b>Domain</b>
+    Inventory control and cycle counting, demand and consumption forecasting, procurement,
+    cutting stock and bin packing, ERP integration, shop floor data capture, supplier quality,
+    time study and line balancing</p>
+</div>
 
 </div>
 </body>
