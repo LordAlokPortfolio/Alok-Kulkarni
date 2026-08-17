@@ -156,6 +156,11 @@
   <p>Moving material to production and consuming it are separate actions, because they
     are separate events. Stock leaving the stock room is relocated, not spent. Collapsing
     those two is the usual shortcut and it is why work in progress goes missing.</p>
+  <p>The scripts have a test suite that runs on every push. Office Scripts usually go untested
+    because they only run inside Excel, so the tests stand in for the part of Excel they touch
+    and then run the script files unmodified: what passes is the same file you import, not a
+    copy adapted to be testable. Three of the tests exist to catch the numbering bug below if
+    it is ever reintroduced, and they do.</p>
   <p class="note"><b>What the preview is, and what it is not.</b> It runs the real workflow and
     the real reorder logic, but entirely in browser memory. Refresh it and everything resets. It
     exists so you can see the thing work in ten seconds, not so you can run a plant on it. The
@@ -175,8 +180,9 @@
 </div>
 
 <h2>Work</h2>
-<p class="caption">Runs inside a manufacturing plant. Not publishable, so take these as
-  described rather than demonstrated.</p>
+<p class="caption">Runs inside a manufacturing plant. Most of it cannot be published, so take
+  those as described rather than demonstrated. Where the code could be separated from company
+  data, it is linked.</p>
 
 <div class="item">
   <h3>The system the inventory runs on</h3>
@@ -234,11 +240,13 @@
     of the gap is not believable for that item. And in as many words: never invent a number to
     clear the table. A row left red is visible and can be fixed later. A correct count edited
     into a wrong one will never be flagged again.</p>
-  <p class="note"><b>Not yet proven.</b> The procedures are written and the first full handover
-    period runs in November 2026, so this is a design and not a result. Whether people follow a
-    sheet when its author is not there to ask is the open question, and it is the only one that
-    matters. I would rather publish the design now and the outcome afterwards than describe an
-    untested plan as though it had worked.</p>
+  <p class="note"><b>Not yet proven.</b> Parts of this have been run before: the cycle count job
+    below was split up and handed to five people for two weeks. What has not happened is a
+    handover of the whole thing at once, across every role, which is what these procedures cover
+    and what runs for the first time in November 2026. So this is a design, not a result. Whether
+    people follow a sheet when its author is not there to ask is the open question, and it is the
+    only one that matters. I would rather publish the design now and the outcome afterwards than
+    describe an untested plan as though it had worked.</p>
 </div>
 
 <div class="item">
@@ -316,6 +324,32 @@
     For a floor tool that is not nothing, since anything the operators dislike gets quietly
     abandoned inside a week. Whether the logged data is accurate enough to reorder from is a
     separate question I have not answered.</p>
+</div>
+
+<div class="item">
+  <h3><a href="https://github.com/LordAlokPortfolio/Alok-Kulkarni/tree/universal-forecasting-tool/universal-forecasting-tool">Consumption forecasting tool</a></h3>
+  <p class="hook">Reads a cycle count export, works out how fast each item is really moving,
+    forecasts forward, and then measures how wrong its own forecast has been.</p>
+  <p class="meta">TypeScript · JavaScript · runs in a browser, no server</p>
+  <p>Usage is calculated per working day, not per calendar day. Two counts eleven days apart
+    with a weekend and a statutory holiday between them span six working days, not eleven, and
+    dividing by calendar days understates consumption on exactly the items that matter. It also
+    separates stock that never moves from stock that barely moves, because those need different
+    decisions, and reads a rise between counts as a delivery rather than as negative usage.</p>
+  <p>The part I would point at is that it computes its own error. After forecasting it scores
+    itself against the history it already has, so it reports how much to trust it instead of
+    producing one confident number with nothing behind it.</p>
+  <p class="note"><b>Found in review, and it is the reason this is worth reading.</b> The date
+    parser accepted numeric dates written with slashes but not with hyphens, and these exports
+    mix both in a single header row. It was silently discarding 53 of 128 count columns in one
+    real file and 18 of 48 in another, then producing confident usage rates from the 59% that
+    survived. It never errored. A tool that fails is obvious; one that quietly uses half your
+    history is not. Fixed and measured: on the sample file the old parser produced 7 intervals
+    per item and the fixed one produces 14. Two other things came out of the same review: a
+    supplier name hardcoded in the shipped JavaScript that did not exist in the TypeScript
+    source, and a TypeScript rewrite that turned out not to be a newer version of the program
+    at all but an unfinished one the page cannot run. All three are written up in the repository
+    rather than quietly corrected.</p>
 </div>
 
 <h2>Smaller tools</h2>
