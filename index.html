@@ -132,7 +132,9 @@
 </p>
 
 <h2>Try this first</h2>
-<p class="caption">The one thing here you can open and use in ten seconds.</p>
+<p class="caption">The one thing here you can open and use in ten seconds. It is not the largest
+  piece of work on this page. That is the system further down, which runs a plant and cannot
+  be published.</p>
 
 <div class="item">
   <h3>Inventory Database</h3>
@@ -143,17 +145,8 @@
     <span>Open the browser preview</span>
     <small>No install, no signup. Works on a phone.</small>
   </a>
-  <p class="note"><b>What the preview is, and what it is not.</b> It runs the real workflow and
-    the real reorder logic, but entirely in browser memory. Refresh it and everything resets. It
-    exists so you can see the thing work in ten seconds, not so you can run a plant on it.
-    The working version is the Office Scripts, and you install those into a workbook yourself:
-    import the sample workbook, add six scripts from Excel's Automate tab, attach a button to
-    each. <a href="https://github.com/LordAlokPortfolio/inventory-database/tree/main/office-script">The
-    setup steps are here.</a> Worth being explicit about the seam, because it is the part people
-    assume wrongly: exporting to xlsx gives you the data, not the automation. Scripts do not
-    travel inside the file.</p>
-  <p>Raise a purchase order, email it to the supplier, receive it into stock, move it
-    to the production floor, record what was actually consumed, ship the finished goods.
+  <p>Raise a purchase order, prepare it as a PDF for the supplier, receive it into stock, move
+    it to the production floor, record what was actually consumed, ship the finished goods.
     Every movement timestamped.</p>
   <p>The reorder alert is the part worth looking at. It does not check whether stock
     sits below a minimum. It checks whether a product will run out <em>before an order
@@ -163,6 +156,17 @@
   <p>Moving material to production and consuming it are separate actions, because they
     are separate events. Stock leaving the stock room is relocated, not spent. Collapsing
     those two is the usual shortcut and it is why work in progress goes missing.</p>
+  <p class="note"><b>What the preview is, and what it is not.</b> It runs the real workflow and
+    the real reorder logic, but entirely in browser memory. Refresh it and everything resets. It
+    exists so you can see the thing work in ten seconds, not so you can run a plant on it. The
+    working version is the Office Scripts, which you install into a workbook yourself: open the
+    sample workbook, import six scripts from Excel's Automate tab, attach a button to each.
+    <a href="https://github.com/LordAlokPortfolio/inventory-database/tree/main/office-script">The
+    setup steps are here.</a> Two seams are worth stating, because both are assumed wrongly.
+    Exporting to xlsx gives you the data and the formulas, not the automation: scripts live in
+    your script library, not inside the file. And Office Scripts cannot send email or build a
+    PDF on their own, so the script lays the purchase order out ready and the sending is your
+    own mail app.</p>
   <p class="note"><b>Found in review.</b> <code>CreatePO</code> numbered orders from the
     open-PO row count, so deleting one tidied-up closed row would reissue a number already
     in the log. It had never fired, because receiving closes rows rather than deleting
