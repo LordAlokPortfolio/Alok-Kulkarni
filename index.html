@@ -208,8 +208,11 @@
     projected usage instead of in response to a stockout.</p>
   <p><b>Reporting.</b> Per-category reports built as HTML, exported, and scheduled to department
     managers for six in the morning. Low stock and purchasing reports off the same data.</p>
-  <p><b>Maintenance.</b> Table conversion, renaming, template loading, orphaned sheet cleanup.
-    Unglamorous, and the reason the other four keep working.</p>
+  <p><b>Maintenance.</b> A workbook this size drifts. Sheets get renamed, ranges stop being
+    proper tables, templates fall out of date, and sheets nobody uses any more are left lying
+    around. Every script above finds its data by table name, so when one of those things drifts
+    the tool does not complain: it quietly reads the wrong range, or none at all. These scripts
+    put the structure back. Unglamorous, and the reason the other four keep working.</p>
   <p class="note"><b>What is wrong with it.</b> It is a monolith living in a workbook, with one
     author, and that workbook is a single point of failure. That is a structural weakness, not a
     modest way of describing a strength, and the operating procedures below exist because of it.
@@ -254,9 +257,18 @@
   <p class="hook">Extrusion profiles were cut order line by order line against 192 inch
     bars. No packing logic, and every offcut became scrap.</p>
   <p class="meta">Python · first-fit-decreasing packing · SQLite · Tkinter</p>
-  <p>Bin packing across the whole order set instead of one line at a time, plus a SQLite
-    remnant registry so an offcut created in one run is found and used by the next, plus
-    a Tkinter app the cutters run at the saw.</p>
+  <p>Cutting one order at a time is what wastes the material. Every bar is 192 inches, each
+    order line needs its own set of shorter lengths, and whatever is left at the end of a bar
+    is scrap, because nothing else on that line fits it. Planning all the lines together
+    instead lets a short piece from one order fill the tail of a bar that was started for
+    another.</p>
+  <p>The rule it follows is deliberately simple: take the longest piece still needed, put it in
+    the first bar it will fit in, repeat until nothing is left. Longest first, because the big
+    pieces are the hard ones to place, and leaving them until the end is what strands them in
+    bars that are already half full. This is not the perfect answer, which is expensive to work
+    out, but it gets close and it finishes while the cutter is standing there waiting.</p>
+  <p>Offcuts are then recorded with their lengths, so a leftover from one run is found and used
+    by the next instead of going in the bin. The cutters run it themselves at the saw.</p>
   <p>Production reports turned out to be <code>.xls</code>, not the CSV I had been testing
     against, so I added native <code>.xls</code> reading rather than ask the floor to change
     how they export.</p>
