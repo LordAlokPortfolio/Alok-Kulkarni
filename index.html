@@ -175,6 +175,69 @@
   described rather than demonstrated.</p>
 
 <div class="item">
+  <h3>The system the inventory runs on</h3>
+  <p class="hook">Seventy Office Scripts, around seventeen thousand lines of TypeScript,
+    against one Excel workbook. It is what the plant's inventory and reporting actually
+    run on day to day.</p>
+  <p class="meta">Office Scripts (TypeScript) · Excel on the web · ~17,000 lines across 70 scripts</p>
+  <p>It grew one script at a time, which is the honest account of how it was built. There was
+    no design phase. What it settled into is four layers.</p>
+  <p><b>Capture.</b> Counts, transfers, receipts and rejections go in through entry scripts
+    rather than free typing, so every movement lands in one history table with a type and a
+    timestamp. Purchase order data is read in from ERP exports rather than rekeyed.</p>
+  <p><b>Validation.</b> This is the layer worth talking about. A count is checked against what
+    is physically possible: the last count, plus everything logged as received, transferred or
+    rejected since. A number above that ceiling means a record is wrong, not that the shelf is
+    wrong, and the two need different people to fix them. Results split three ways. Definitely
+    wrong, which is work. Shelf and paperwork disagree in a way the data cannot resolve, which
+    is for reading and not for fixing. And nothing impossible found, which is not the same as
+    right, and is labelled so it does not get read that way.</p>
+  <p><b>Analysis.</b> Daily usage rates derived from movement history rather than typed in.
+    Minimum stock levels rebuilt from what actually got received, replacing numbers nobody could
+    source. Consumption forecasting across three product lines, so material is ordered against
+    projected usage instead of in response to a stockout.</p>
+  <p><b>Reporting.</b> Per-category reports built as HTML, exported, and scheduled to department
+    managers for six in the morning. Low stock and purchasing reports off the same data.</p>
+  <p><b>Maintenance.</b> Table conversion, renaming, template loading, orphaned sheet cleanup.
+    Unglamorous, and the reason the other four keep working.</p>
+  <p class="note"><b>What is wrong with it.</b> It is a monolith living in a workbook, with one
+    author, and that workbook is a single point of failure. That is a structural weakness, not a
+    modest way of describing a strength, and the operating procedures below exist because of it.
+    Whether the validation layer has actually reduced count error is unmeasured. I know it catches
+    things. I do not know the rate.</p>
+</div>
+
+<div class="item">
+  <h3>Operating procedures, so it is not only mine</h3>
+  <p class="hook">A system that runs a plant cannot depend on one person being reachable.
+    Writing it down so other people can run it correctly is part of the job, not an
+    afterthought.</p>
+  <p class="meta">Process design · one task sheet per role · purchasing, receiving, counting, production control</p>
+  <p>Work is isolated rather than trusted. Everyone writes into a working copy and the master
+    is merged afterwards, so unfamiliar hands cannot corrupt the record they are writing into,
+    because they are not writing into it.</p>
+  <p>Each role gets its own sheet, and each sheet says what the step is and then what happens
+    if it is skipped. Closing a purchase order in the ERP while leaving it open in the workbook
+    is called out as the one combination that causes trouble, because nothing alerts anyone and
+    the numbers quietly stop agreeing. A rejection raised without a matching row on the shelf
+    record is called out as the one failure in the whole process that leaves no trace, since it
+    looks exactly like ordinary consumption to everything downstream. Telling somebody a rule is
+    weaker than telling them what their mistake will look like to everyone else, which is usually
+    nothing at all.</p>
+  <p>The instructions for reading the validation output are written the same way. Red is work.
+    Amber is to be read and not fixed, because the disagreement has two believable explanations
+    and you cannot tell them apart from a screen, so you walk out to the rack only when the size
+    of the gap is not believable for that item. And in as many words: never invent a number to
+    clear the table. A row left red is visible and can be fixed later. A correct count edited
+    into a wrong one will never be flagged again.</p>
+  <p class="note"><b>Not yet proven.</b> The procedures are written and the first full handover
+    period runs in November 2026, so this is a design and not a result. Whether people follow a
+    sheet when its author is not there to ask is the open question, and it is the only one that
+    matters. I would rather publish the design now and the outcome afterwards than describe an
+    untested plan as though it had worked.</p>
+</div>
+
+<div class="item">
   <h3>Cutting stock optimizer</h3>
   <p class="hook">Extrusion profiles were cut order line by order line against 192 inch
     bars. No packing logic, and every offcut became scrap.</p>
@@ -252,15 +315,7 @@
 </div>
 
 <h2>Smaller tools</h2>
-<p class="caption">Real and in use, but not worth dressing up.</p>
-
-<div class="item">
-  <h3>Paint consumption forecasting</h3>
-  <p class="meta">Office Scripts · Excel</p>
-  <p>Estimation, work in progress consumption, and forward forecast across the windows, patio
-    and door departments, so paint is ordered against projected usage rather than in response
-    to a stockout. I have not measured whether stockouts actually dropped.</p>
-</div>
+<p class="caption">Separate from the workbook system above, and worth a line each.</p>
 
 <div class="item">
   <h3>ERP extraction</h3>
@@ -269,13 +324,6 @@
     data is pulled out on a schedule and downstream tools read a table instead of a web page.
     Scraping a portal is the wrong long term answer and I know it. The right one is database
     access, which I do not have.</p>
-</div>
-
-<div class="item">
-  <h3>Reorder points from receipt history</h3>
-  <p class="meta">Excel</p>
-  <p>Minimum stock levels rebuilt from actual receipt history rather than the numbers already
-    in the system, which nobody could source.</p>
 </div>
 
 <div class="item">
