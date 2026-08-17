@@ -138,11 +138,20 @@
   <h3>Inventory Database</h3>
   <p class="hook">A small manufacturer's entire material flow, running inside one Excel
     workbook. Free, and the code is public.</p>
-  <p class="meta">Office Scripts (TypeScript) · Excel on the web · static HTML demo</p>
+  <p class="meta">Office Scripts (TypeScript) · Excel on the web · browser preview</p>
   <a class="demo" href="https://lordalokportfolio.github.io/inventory-database/">
-    <span>Open the live demo</span>
+    <span>Open the browser preview</span>
     <small>No install, no signup. Works on a phone.</small>
   </a>
+  <p class="note"><b>What the preview is, and what it is not.</b> It runs the real workflow and
+    the real reorder logic, but entirely in browser memory. Refresh it and everything resets. It
+    exists so you can see the thing work in ten seconds, not so you can run a plant on it.
+    The working version is the Office Scripts, and you install those into a workbook yourself:
+    import the sample workbook, add six scripts from Excel's Automate tab, attach a button to
+    each. <a href="https://github.com/LordAlokPortfolio/inventory-database/tree/main/office-script">The
+    setup steps are here.</a> Worth being explicit about the seam, because it is the part people
+    assume wrongly: exporting to xlsx gives you the data, not the automation. Scripts do not
+    travel inside the file.</p>
   <p>Raise a purchase order, email it to the supplier, receive it into stock, move it
     to the production floor, record what was actually consumed, ship the finished goods.
     Every movement timestamped.</p>
@@ -279,7 +288,7 @@
 <h2>Outside work</h2>
 
 <div class="item">
-  <h3><a href="https://github.com/LordAlokPortfolio/LordAlokPortfolio/tree/main/pet-tv-factory">Pet TV Factory</a></h3>
+  <h3>Pet TV Factory</h3>
   <p class="hook">Hour long ambient video for pets left home alone. The interesting constraint
     is encode cost.</p>
   <p class="meta">Python · ffmpeg · GitHub Actions · pytest</p>
