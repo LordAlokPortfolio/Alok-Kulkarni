@@ -331,23 +331,91 @@
 </div>
 
 <div class="item">
-  <h3>Browser tools</h3>
-  <p class="meta">HTML · JavaScript · GitHub Pages</p>
+  <h3><a href="https://lordalokportfolio.github.io/report-tools/">Browser tools</a></h3>
+  <p class="meta">HTML · JavaScript · GitHub Pages · public and live</p>
   <p>An NCR generator that outputs PDFs, a paint report reader, and a material transfer form.
-    Single purpose, no install.</p>
+    Single purpose, no install, and everything stays on the machine that opened it: nothing is
+    uploaded anywhere. Open the link and they work.</p>
 </div>
 
 <h2>Outside work</h2>
+<p class="caption">Side projects, listed for completeness rather than as evidence. Several are
+  unfinished and I have said where each one stops. Some are being worked on now, so these will
+  move.</p>
 
 <div class="item">
   <h3>My Evil Diary</h3>
-  <p class="hook">A horror fiction writing surface with no text box and no send button. The
-    whole page is ruled parchment and you write onto it, so Apple Pencil works natively.</p>
   <p class="meta">Python, standard library only · JavaScript · Web Crypto</p>
-  <p>The real problem was privacy. The passphrase is hashed in the browser and only the hash
-    reaches the server, so there is no identity check to talk your way past and no way to
-    recover a forgotten passphrase. Those are the same property stated in both directions, and
-    the README says so rather than promising a recovery it cannot deliver.</p>
+  <p>A horror fiction writing surface with no text box and no send button. The whole page is
+    ruled parchment and you write onto it, so Apple Pencil works natively. The passphrase is
+    hashed in the browser and only the hash reaches the server, so there is no identity check
+    to talk past and no way to recover a forgotten passphrase. Those are the same property
+    stated in both directions and the README says so, rather than promising a recovery it
+    cannot deliver. <b>Working. Private repository, so there is nothing to click.</b></p>
+</div>
+
+<div class="item">
+  <h3>Voldemort's Diary</h3>
+  <p class="meta">Swift · GitHub Actions · OpenAI</p>
+  <p>An iPad app styled after the diary in Harry Potter: handwriting appears on parchment as
+    though written by an invisible hand, and a persona answers in character. It is built on
+    Windows with no Xcode anywhere, by having a macOS runner do the compiling.
+    <b>Unfinished. CI produces an unsigned build, which cannot be installed without a Mac to
+    sign it or a paid developer account. It has never run on a device. A web page mirrors the
+    look and persona and does work.</b></p>
+</div>
+
+<div class="item">
+  <h3>fourier-trace</h3>
+  <p class="meta">Python · numpy · manim · ffmpeg · pytest</p>
+  <p>Drop a photo in a folder and get back a clip where rotating circles draw its outline, the
+    epicycle animation. Nothing is derived by hand: an FFT returns the coefficients directly,
+    and term k is a circle of that radius spinning k times per loop.
+    <b>Unfinished. It has a test suite covering the CLI and configuration, and it has never
+    been run end to end, because that needs a local machine with ffmpeg, cairo and pango. No
+    output clip exists yet.</b></p>
+</div>
+
+<div class="item">
+  <h3>couple-space</h3>
+  <p class="meta">React · TypeScript · Firebase · libsodium · Plaid</p>
+  <p>A private dashboard for exactly two people: messages, files, shared finances and a
+    calendar. Content is encrypted in the browser before it reaches Firebase, so the server
+    only ever holds ciphertext, and access is restricted to two addresses by database rules
+    rather than by checks in the app, which is the difference between a lock and a sign.
+    <b>Unfinished. The code is complete and it has never been deployed or run, because it
+    needs a Firebase project and a Plaid account that only I can create.</b></p>
+</div>
+
+<div class="item">
+  <h3>StarTalk question dataset</h3>
+  <p class="meta">Python · yt-dlp · NASA open APIs</p>
+  <p>Pulls listener questions out of Cosmic Queries episodes, groups the recurring ones, and
+    checks each topic against NASA's public APIs to see which could be answered with real data.
+    Fifteen episodes transcribed and the questions extracted.
+    <b>Unfinished. Twenty four of forty nine question and answer pairs were never resolved, and
+    the API checking was done by hand rather than automated.</b></p>
+</div>
+
+<div class="item">
+  <h3>RPS Arena</h3>
+  <p class="meta">JavaScript · Cordova · GitHub Actions</p>
+  <p>Hundreds of rock, paper and scissors pieces are released into a physics arena and convert
+    each other on contact until one type is left. You pick before the release and every round
+    replays from its seed, so nothing can be steered after picks close. The maths behind it,
+    the Monte Carlo runs and the arena sizing, is written up separately.
+    <b>Unfinished. Packaged for Android and never submitted. The odds analysis ended up as
+    development tooling rather than shipping, and the game itself scores flat.</b></p>
+</div>
+
+<div class="item">
+  <h3>Portfolio tooling</h3>
+  <p class="meta">Claude Code skills</p>
+  <p>Four skills for maintaining this site: propagate a changed fact everywhere it appears,
+    scaffold a new layout variant, serve and screenshot one to check it, and audit a folder for
+    dead links and accessibility problems.
+    <b>Stale. They were written against the previous portfolio layout and need updating for
+    this one.</b></p>
 </div>
 
 <h2>Experience</h2>
