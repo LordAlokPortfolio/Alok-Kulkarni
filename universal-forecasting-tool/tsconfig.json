@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "none",
+    "//": "Deliberately not main.js. main.ts is an unfinished rewrite (see README); compiling it over the working file would replace a tool that runs with one the page cannot use.",
+    "outFile": "main.rewrite.js",
+    "strict": true
+  },
+  "include": ["main.ts"]
+}

@@ -1,0 +1,14 @@
+# Exports, not code. The original repository committed real purchase and cycle
+# count data next to the tool because nothing stopped it, including supplier
+# names, part numbers and unit costs. Blocked here by default.
+*.xlsx
+*.xls
+*.xlsm
+~$*
+
+# Excel and editor leftovers
+_backup_*/
+.~lock.*
+
+# Compiled output of the unfinished rewrite (see README)
+main.rewrite.js

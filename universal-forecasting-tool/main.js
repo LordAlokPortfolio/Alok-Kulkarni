@@ -1,0 +1,1339 @@
+﻿"use strict"
+function parseUniversalDate(v) {
+  if (v === null || v === undefined || v === "") return null
+
+  // Excel serial number
+  if (typeof v === "number" || /^\d{5,6}$/.test(String(v))) {
+    const n = Number(v)
+    if (!isNaN(n)) return new Date((n - 25569) * 86400 * 1000)
+  }
+
+  const s = String(v).trim()
+
+  // ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = new Date(s + "T00:00:00")
+    return isNaN(d) ? null : d
+  }
+
+  // DD/MM/YYYY or MM/DD/YYYY
+  const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/)
+  if (m1) {
+    let d = Number(m1[1])
+    let m = Number(m1[2]) - 1
+    let y = Number(m1[3])
+    if (y < 100) y += 2000
+
+    // Try both interpretations safely
+    const d1 = new Date(y, m, d)
+    const d2 = new Date(y, d - 1, m + 1)
+
+    if (!isNaN(d1)) return d1
+    if (!isNaN(d2)) return d2
+  }
+
+  // Fallback (last resort)
+  const d = new Date(s.replace(/-/g, "/"))
+  return isNaN(d) ? null : d
+}
+
+function categoryDemandTrend(c) {
+  let inc = 0, dec = 0, stable = 0
+
+  c.skus.forEach(s => {
+    const label = patternLabel(s)
+    if (label.includes("increasing")) inc++
+    else if (label.includes("slowing")) dec++
+    else stable++
+  })
+
+  const total = c.skus.length
+  if (!total) return "No demand signal."
+
+  if (inc / total > 0.4) return "Category demand is increasing."
+  if (dec / total > 0.4) return "Category demand is slowing."
+  return "Category demand is stable."
+}
+
+
+function categoryCoverageNarrative(c) {
+  if (!c.skuCount) return "No active SKUs in this category."
+
+  if (c.placeOrder > 0) {
+    return `${c.riskPercent}% of SKUs do not cover supplier lead-time demand.`
+  }
+  if (c.review > 0) {
+    return `Partial lead-time exposure identified across the category.`
+  }
+  return `All SKUs are currently covered against supplier lead-time demand.`
+}
+
+
+function parseWithSelectedFormat(v) {
+  if (state.supplyDateFormat === "AUTO") {
+    return parseUniversalDate(v)
+  }
+
+  if (v === null || v === undefined || v === "") return null
+  const s = String(v).trim()
+
+  if (state.supplyDateFormat === "EXCEL") {
+    const n = Number(s)
+    return isNaN(n) ? null : new Date((n - 25569) * 86400 * 1000)
+  }
+
+  if (state.supplyDateFormat === "ISO") {
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T00:00:00") : null
+  }
+
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+  if (!m) return null
+
+  const a = Number(m[1])
+  const b = Number(m[2])
+  const y = Number(m[3])
+
+  return state.supplyDateFormat === "DMY"
+    ? new Date(y, b - 1, a)
+    : new Date(y, a - 1, b)
+}
+
+
+function renderAbout(){
+  const el = document.getElementById("about-view")
+  if (!el) return
+  el.innerHTML = ABOUT_TEXT
+}
+function daysBetween(a, b){
+  const d1 = a instanceof Date ? a : new Date(a)
+  const d2 = b instanceof Date ? b : new Date(b)
+  if (isNaN(d1) || isNaN(d2)) return null
+  return Math.round((d2 - d1) / 86400000)
+}
+
+function median(arr){
+  if (!arr || arr.length === 0) return 0
+  const s = [...arr].sort((a,b)=>a-b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2
+}
+
+function formatESTDate(date) {
+  if (!(date instanceof Date)) return "None"
+  return date.toLocaleDateString("en-CA", {
+    timeZone: "America/Toronto",
+    year: "numeric",
+    month: "short",
+    day: "2-digit"
+  })
+}
+
+
+/* =========================
+   CONSTANTS
+   ========================= */
+
+const HOLIDAYS = new Set([
+  "2024-01-01","2024-02-19","2024-03-29","2024-05-20","2024-07-01","2024-09-02","2024-10-14","2024-12-25","2024-12-26",
+  "2025-01-01","2025-02-17","2025-04-18","2025-05-19","2025-07-01","2025-09-01","2025-10-13","2025-12-25","2025-12-26",
+  "2026-01-01","2026-02-16","2026-04-03","2026-05-18","2026-07-01","2026-09-07","2026-10-12","2026-12-25","2026-12-28"
+])
+
+
+const PLANNING_DISCLAIMER =
+  "This represents expected consumption over the planning horizon and is not a purchase recommendation."
+
+
+
+const MONTH_MAP = {
+  jan:0,feb:1,mar:2,apr:3,may:4,jun:5,
+  jul:6,aug:7,sep:8,oct:9,nov:10,dec:11
+}
+
+// Horizon policy (NON-NEGOTIABLE)
+const WEEKS_PER_MONTH = 4.33
+const FORWARD_HORIZON_MONTHS = 24
+const FORWARD_HORIZON_WEEKS = FORWARD_HORIZON_MONTHS * WEEKS_PER_MONTH
+
+/* =========================
+   STATE
+   ========================= */
+
+
+const state = {
+  demand: [],
+  supply: {},
+  leadTimes: {},
+  mode: "analyst",
+  planning: { window: 90 },
+  validation: null
+}
+
+state.supplyDateFormat = "MDY" // AUTO | ISO | DMY | MDY | EXCEL
+
+
+/* =========================
+   DATE / WORKDAY HELPERS
+   ========================= */
+
+function parseIsoDate(d){ return new Date(d+"T00:00:00") }
+
+function formatIso(y,m,day){
+  const mm=m<10?"0"+m:String(m)
+  const dd=day<10?"0"+day:String(day)
+  return `${y}-${mm}-${dd}`
+}
+
+function isWorkingDay(iso){
+  const d=parseIsoDate(iso)
+  const dow=d.getUTCDay()
+  if(dow===0||dow===6)return false
+  if(HOLIDAYS.has(iso))return false
+  return true
+}
+
+function countWorkingDays(startIso,endIso){
+  const start=parseIsoDate(startIso)
+  const end=parseIsoDate(endIso)
+  if(end<=start)return 0
+  let count=0
+  const d=new Date(start.getTime())
+  d.setUTCDate(d.getUTCDate()+1)
+  while(d<=end){
+    const iso=d.toISOString().slice(0,10)
+    if(isWorkingDay(iso))count+=1
+    d.setUTCDate(d.getUTCDate()+1)
+  }
+  return count
+}
+
+/* =========================
+   WINDOW / USAGE
+   ========================= */
+
+function computeWindows(history){
+  const zero={raw:0,workingDays:0,adjusted:0}
+  if(history.length===0)return{window30:zero,window60:zero,window90:zero}
+
+  const maxIso=history[history.length-1].date
+  const maxDate=parseIsoDate(maxIso)
+
+  function windowFor(days){
+    let raw=0,wd=0
+    for(const p of history){
+      const d=parseIsoDate(p.date)
+      const diff=Math.floor((maxDate-d)/86400000)
+      if(diff>=0&&diff<days){ raw+=p.qty; wd+=p.workingDays }
+    }
+    return {raw,workingDays:wd,adjusted:wd>0?raw/wd:0}
+  }
+
+  return {
+    window30:windowFor(30),
+    window60:windowFor(60),
+    window90:windowFor(90)
+  }
+}
+
+function getPlanningUsage(s){
+  const w=state.planning.window
+  if(w===30)return s.window30.adjusted||0
+  if(w===60)return s.window60.adjusted||0
+  if(w===90)return s.window90.adjusted||0
+  return s.avgPerWorkingDay||0
+}
+
+function usageLabel(cls){
+  if(cls==="A")return"Regular mover"
+  if(cls==="B")return"Slow mover"
+  return"No recent usage"
+}
+
+function patternLabel(s){
+  if(s.class==="C")return"No recent usage"
+  const base=s.window90.adjusted
+  const recent=s.window30.adjusted
+  if(base===0&&recent===0)return"Stable at low usage"
+  const ratio=base>0?(recent-base)/base:0
+  if(ratio>0.25)return"Demand increasing (last 30d > 90d)"
+  if(ratio<-0.25)return"Demand slowing (last 30d < 90d)"
+  return"Stable demand"
+}
+
+
+function recommendation(s) {
+  let decision = ""
+  let reason = ""
+
+  // Guard: no demand
+  if (!s.history || s.history.length === 0 || s.avgPerWorkingDay <= 0) {
+    return "NO ACTION: No meaningful consumption history."
+  }
+
+  const vendor = s.vendor || "supplier"
+
+  // =========================
+  // CURRENT STOCK (LATEST ≤ TODAY)
+  // =========================
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  if (
+    s.currentStock === null ||
+    isNaN(s.currentStock) ||
+    (s.currentStockDate && new Date(s.currentStockDate) > today)
+  ) {
+
+let poText = ""
+
+if (s._decision?.incomingQty && s._decision?.incomingDate) {
+  poText =
+    `An open purchase order for approximately ` +
+    `<strong>${s._decision.incomingQty}</strong> units ` +
+    `is expected on <strong>${s._decision.incomingDate}</strong>.<br>`
+}
+
+if (s._decision?.shortfall > 0) {
+  poText +=
+    `Based on current usage, inventory is expected to run short by ` +
+    `<strong>~${Math.round(s._decision.shortfall)} units</strong> before receipt.<br>`
+}
+
+    return `
+<strong>INSUFFICIENT INVENTORY VISIBILITY</strong><br>
+Latest usable cycle count must be dated <strong>on or before today</strong>.<br>
+Recent usage: <strong>${s.avgPerWorkingDay.toFixed(2)} units/day</strong>.<br>
+<strong>Action:</strong> Ensure the cycle-count CSV uses the most recent
+count dated ≤ today (future dates are ignored).
+`.trim()
+  }
+
+  const onHand = s.currentStock
+
+  // =========================
+  // OBSERVED LEAD TIME (SKU RECEIPTS ONLY)
+  // =========================
+  const receivedLT = (state.supply[s.sku] || [])
+    .filter(x => !x.open && x.leadWeeks)
+
+  const leadWeeks =
+    receivedLT.length > 0
+      ? median(receivedLT.map(x => x.leadWeeks))
+      : null
+
+  const leadDays = leadWeeks !== null
+    ? Math.round(leadWeeks * 7)
+    : null
+
+  // =========================
+  // DEMAND
+  // =========================
+  const dailyUsage = s.avgPerWorkingDay
+  const weeklyUsage = dailyUsage * 5
+  const leadTimeDemand = leadDays !== null ? dailyUsage * leadDays : null
+
+  // =========================
+  // 24-MONTH PLANNING
+  // =========================
+  const WORKING_DAYS_PER_YEAR = 260
+  const plannedQty24m = dailyUsage * WORKING_DAYS_PER_YEAR * 2
+  const openPO = s._decision?.incomingQty != null
+
+  // =========================
+  // DECISION LOGIC
+  // =========================
+  if (leadTimeDemand !== null && onHand < leadTimeDemand) {
+    decision = openPO ? "EXPEDITE / MONITOR OPEN PO ": "PLACE ORDER "
+    reason = "Current stock will not cover supplier lead time demand."
+  } else if (leadTimeDemand !== null) {
+    decision = "NO ADDITIONAL ORDER REQUIRED (open PO already in transit)"
+    reason = "Current stock and committed supply are sufficient to cover supplier lead time demand."
+  } else {
+    decision = "REVIEW REQUIRED"
+    reason = "Supplier lead time cannot be determined from receipt history."
+  }
+
+  // =========================
+  // NARRATIVE SENTENCE (PLANNER LANGUAGE)
+  // =========================
+  const narrative =
+    onHand === 0
+      ? " Since the last cycle count, there has been no inventory on hand and the purchase order is still open."
+      : onHand < leadTimeDemand
+        ? " Since the last cycle count, current inventory will be consumed before the next receipt arrives."
+        : " Since the last cycle count, inventory is sufficient to cover demand through the supplier's lead time."
+
+  // =========================
+  // OUTPUT
+  // =========================
+  return `
+<strong>${decision}</strong><br>
+ Right now we have <strong>${onHand} units</strong> on hand.<br>
+ Recent usage: <strong>${dailyUsage.toFixed(2)} units/day</strong>
+(~${Math.round(weeklyUsage)} per week).<br>
+ Observed supplier lead time: <strong>${leadDays !== null ? `${leadDays} working days` : "Insufficient history"}</strong> (${vendor}).<br>
+ Expected consumption during lead time: <strong>${leadTimeDemand !== null ? `~${Math.round(leadTimeDemand)} units` : "N/A"}</strong>.<br>
+<strong>${narrative}</strong><br>
+<strong> 24-month planning view:</strong> expected consumption
+<strong>~${Math.round(plannedQty24m)} units</strong> over the next 24 months.<br>
+<strong> Decision basis:</strong> ${reason}
+`.trim()
+}
+
+
+
+/* =========================
+   CSV LOADING
+   ========================= */
+
+function loadCsv(file,cb){
+  Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>cb(r.data)})
+}
+
+/* =========================
+   DEMAND PARSE (v1 COMPLETE)
+   ========================= */
+const isoRegex = /^\d{4}-\d{2}-\d{2}$/
+// Numeric dates, either separator. This used to accept slashes only, so an
+// export mixing 12/15/2025 and 12-12-2025 in one header row, which is what
+// these exports do, had every hyphenated column quietly dropped: about 40% of
+// the count history, with no warning and a forecast still produced from the
+// remainder. Parsing the parts by hand rather than handing the string to
+// new Date() also keeps the result off the timezone, which shifted dates by a
+// day depending on where it ran.
+const numericRegex = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/
+const excelNumRegex = /^\d{5}$/
+const shortRegex = /^\s*(\d{1,2})[-\/\s](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*$/i
+
+// Month first, which is what these exports produce, unless that cannot be
+// true: 25/12/2025 is only readable day first, and guessing wrong would put a
+// count in the wrong month instead of failing visibly.
+function numericToIso(match) {
+  let month = parseInt(match[1], 10)
+  let day = parseInt(match[2], 10)
+  let year = parseInt(match[3], 10)
+  if (year < 100) year += year < 70 ? 2000 : 1900
+  if (month > 12 && day <= 12) { const swap = month; month = day; day = swap }
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  return formatIso(year, month, day)
+}
+
+
+function parseDemand(rows){
+  if(!rows||rows.length===0)return
+
+  const fields=Object.keys(rows[0])
+  const headerInfos=[]
+  fields.forEach((f,idx)=>{
+    const t=f.trim()
+    let isDate=false,iso,sd,sm
+    if (isoRegex.test(t)) {
+  isDate = true
+  iso = t
+} else if (numericRegex.test(t)) {
+  const parsed = numericToIso(t.match(numericRegex))
+  if (parsed) {
+    isDate = true
+    iso = parsed
+  }
+} else if (excelNumRegex.test(t)) {
+  const d = new Date((Number(t) - 25569) * 86400 * 1000)
+  isDate = true
+  iso = d.toISOString().slice(0,10)
+}
+
+    else{
+      const m=t.match(shortRegex)
+      if(m){ isDate=true; sd=parseInt(m[1],10); sm=MONTH_MAP[m[2].toLowerCase().slice(0,3)] }
+    }
+    headerInfos.push({field:f,index:idx,isDate,iso,sd,sm})
+  })
+
+  const dateHeaders=headerInfos.filter(h=>h.isDate)
+  const shortHeaders=dateHeaders.filter(h=>!h.iso&&h.sm&&h.sd)
+
+  if(shortHeaders.length){
+    let year=new Date().getFullYear(),prev=null
+    shortHeaders.sort((a,b)=>a.index-b.index).forEach(h=>{
+      if(prev!==null&&h.sm<prev)year++
+      prev=h.sm
+      h.iso=formatIso(year,h.sm,h.sd)
+    })
+  }
+
+  const dateSorted=dateHeaders.filter(h=>h.iso).sort((a,b)=>Date.parse(a.iso)-Date.parse(b.iso))
+  const skuCol = fields.find(f=>f.toLowerCase()==="sku") || fields[0]
+  const descCol = fields.find(f=>f.toLowerCase().includes("desc")) || ""
+  const vendorCol = fields.find(f=>{
+    const l = f.toLowerCase()
+    return l.includes("vendor") || l.includes("supplier")
+  }) || ""
+  const materialCol = fields.find(f => {
+    const l = f.toLowerCase()
+    return l.includes("material") && l.includes("type")
+  }) || ""
+
+  const seen=new Map(),dup=new Set()
+  const validation={missingStockCells:0,invalidStockCells:0,replenishmentEvents:0,duplicateSkus:[]}
+  const series=[]
+
+  rows.forEach(row=>{
+    const sku=String(row[skuCol]||"").trim()
+    if(!sku)return
+    const c=(seen.get(sku)||0)+1; seen.set(sku,c); if(c>1)dup.add(sku)
+    const todayIso = new Date().toISOString().slice(0,10)
+    const validDates = dateSorted.filter(d => d.iso <= todayIso)
+    const latest = validDates[validDates.length - 1]
+    const currentStockRaw = latest ? row[latest.field] : null
+    const currentStock = currentStockRaw == null || currentStockRaw === ""
+      ? null : Number(currentStockRaw)
+
+    const history=[]
+    for(let i=1;i<dateSorted.length;i++){
+      const prev=dateSorted[i-1],cur=dateSorted[i]
+      const p=Number(row[prev.field]||0)
+      const q=Number(row[cur.field]||0)
+      if(q>p)validation.replenishmentEvents++
+      const moved=Math.max(p-q,0)
+      const wd=countWorkingDays(prev.iso,cur.iso)
+      history.push({date:cur.iso,qty:moved,workingDays:wd})
+    }
+
+    const totalQty=history.reduce((s,p)=>s+p.qty,0)
+    const totalWorking=history.reduce((s,p)=>s+p.workingDays,0)
+    const {window30,window60,window90}=computeWindows(history)
+
+series.push({
+  sku,
+  desc: descCol
+    ? String(row[descCol] || "").trim()
+    : "Description not provided",
+  vendor: (
+    vendorCol ? String(row[vendorCol] || "").trim() : ""
+  ) || state.supply[sku]?.[0]?.vendor || "",
+  materialType: materialCol
+    ? String(row[materialCol] || "").trim().toUpperCase()
+    : "",
+  history,
+  totalQty,
+  avgPerWorkingDay: totalWorking > 0 ? totalQty / totalWorking : 0,
+  window30,
+  window60,
+  window90,
+  currentStock,
+  class: null
+})
+
+
+
+  })
+
+  validation.duplicateSkus=[...dup]
+  state.validation=validation
+  state.demand=series
+
+  // =========================
+  // UNIVERSAL ABC CLASSIFICATION
+  // =========================
+
+  const items = state.demand.filter(s => s.avgPerWorkingDay > 0)
+
+  if (items.length > 0) {
+    const values = items.map(s => s.avgPerWorkingDay)
+    const mean = values.reduce((a,b)=>a+b,0) / values.length
+    const variance = values.reduce((s,v)=>s + (v-mean)**2, 0) / values.length
+    const cv = Math.sqrt(variance) / mean
+
+    items.sort((a,b)=>
+      b.avgPerWorkingDay - a.avgPerWorkingDay ||
+      b.window90.adjusted - a.window90.adjusted ||
+      a.sku.localeCompare(b.sku)
+    )
+
+    if (cv >= 1.0) {
+      const total = values.reduce((a,b)=>a+b,0)
+      let cum = 0
+      items.forEach(s=>{
+        cum += s.avgPerWorkingDay
+        const pct = cum / total
+        s.class = pct <= 0.8 ? "A" : pct <= 0.95 ? "B" : "C"
+      })
+    } else {
+      items.forEach((s,i)=>{
+        const p = (i+1)/items.length
+        s.class = p <= 0.2 ? "A" : p <= 0.5 ? "B" : "C"
+      })
+    }
+  }
+
+  state.demand.forEach(s=>{
+    if (!s.class) s.class = "C"
+  })
+
+  setMode(state.mode)
+  if (Object.keys(state.supply).length) renderManagement()
+}
+
+
+/* =========================
+   SUPPLY PARSE
+   ========================= */
+
+function parseSupply(rows) {
+  state.supply = {}        // per-SKU supply events (received + open)
+  state.leadTimes = {}     // per-vendor lead time samples (weeks)
+
+  rows.forEach(r => {
+  const sku = String(r["ID"] || "").trim()
+  if (!sku) return
+
+
+    const vendor = String(r["Vendor"] || "").trim() || "Vendor not provided"
+
+    const poDateRaw = r["PO DATE"]
+    const recvDateRaw = r["PO RECEIVEDATE"]
+
+    if (!poDateRaw) return
+
+    const poDate = parseWithSelectedFormat(poDateRaw)
+    if (!poDate) return
+
+ // -----------------------------
+// OPEN ORDER (NO RECEIVEDATE)
+// -----------------------------
+if (!recvDateRaw || String(recvDateRaw).trim() === "") {
+  if (!state.supply[sku]) state.supply[sku] = []
+
+  const qtyRaw =
+    r["Quantity"] ??
+    r["QTY"] ??
+    r["PO QTY"] ??
+    r["ORDER QTY"] ??
+    r["Qty"] ??
+    r["QUANTITY"] ??
+    null
+
+  state.supply[sku].push({
+    vendor,
+    poDate: poDate,
+    recvDate: null,
+    qty: qtyRaw !== null && qtyRaw !== "" ? Number(qtyRaw) : null,
+    open: true
+  })
+
+  return
+}
+
+
+
+    // -----------------------------
+    // RECEIVED ORDER → LEAD TIME
+    // -----------------------------
+    const recvDate = parseWithSelectedFormat(recvDateRaw)
+    if (!recvDate) return
+
+    const leadDays = daysBetween(poDate, recvDate)
+    if (leadDays === null || leadDays <= 0) return
+
+    const leadWeeks = leadDays / 7
+
+    if (!state.supply[sku]) state.supply[sku] = []
+    state.supply[sku].push({
+      vendor,
+      poDate: poDate,
+      recvDate: recvDate,
+      leadWeeks,
+      open: false
+    })
+
+    if (!state.leadTimes[vendor]) state.leadTimes[vendor] = []
+    state.leadTimes[vendor].push(leadWeeks)
+  })
+
+  // ---------------------------------
+  // BACKFILL VENDOR INTO DEMAND SKUs
+  // ---------------------------------
+  state.demand.forEach(s => {
+    if (!s.vendor && state.supply[s.sku]?.length) {
+      s.vendor = state.supply[s.sku][0].vendor
+    }
+  })
+  
+  if (state.mode === "management") renderManagement()
+}
+
+
+
+/* =========================
+   UI RENDER
+   ========================= */
+
+function renderAnalyst(){
+  const tb = document.getElementById("analyst-body")
+  if (!tb) return
+  tb.innerHTML = ""
+
+  const sorted = [...state.demand].sort((a,b)=>
+    a.class.localeCompare(b.class) ||
+    b.avgPerWorkingDay - a.avgPerWorkingDay ||
+    b.window90.adjusted - a.window90.adjusted ||
+    a.sku.localeCompare(b.sku)
+  )
+
+  sorted.forEach(s=>{
+    tb.innerHTML += `
+      <tr>
+        <td>${s.sku}</td>
+        <td>${s.class}</td>
+        <td>${s.avgPerWorkingDay.toFixed(3)}</td>
+        <td>${s.window30.adjusted.toFixed(3)}</td>
+        <td>${s.window60.adjusted.toFixed(3)}</td>
+        <td>${s.window90.adjusted.toFixed(3)}</td>
+      </tr>`
+  })
+}
+
+/* =========================
+   CATEGORY AGGREGATION
+   ========================= */
+function inferCategory(s) {
+  const d = (s.desc || "").toLowerCase()
+
+  if (
+    d.includes("jamb") ||
+    d.includes("brickmold") ||
+    d.includes("window ext") ||
+    d.includes("door")
+  ) return "WOOD"
+
+  if (
+    d.includes("paint") ||
+    d.includes("coating")
+  ) return "PAINT"
+
+  return "OTHER"
+}
+
+function aggregateByCategory(items) {
+  const categories = {}
+
+  items.forEach(s => {
+    const category =
+      s.materialType ||
+      s.category ||
+      inferCategory(s)
+    if (!categories[category]) {
+      categories[category] = {
+        name: category,
+        skus: [],
+        skuCount: 0,
+        totalDailyUsage: 0,
+        plannedQty24m: 0,
+        placeOrder: 0,
+        review: 0,
+        covered: 0,
+        riskSkus: []
+      }
+    }
+
+    const c = categories[category]
+    c.skus.push(s)
+    c.skuCount += 1
+    c.totalDailyUsage += s.avgPerWorkingDay
+    c.plannedQty24m += s.avgPerWorkingDay * 260 * 2
+
+    const rec = s._decision?.recommendationText || ""
+
+    if (rec.includes("PLACE ORDER")) {
+      c.placeOrder++
+      c.riskSkus.push(s)
+    } else if (rec.includes("REVIEW")) {
+      c.review++
+    } else {
+      c.covered++
+    }
+  })
+
+  Object.values(categories).forEach(c => {
+    c.weeklyUsage = c.totalDailyUsage * 5
+    c.riskPercent = c.skuCount
+      ? Math.round((c.placeOrder / c.skuCount) * 100)
+      : 0
+
+    // Sort risk SKUs: A-class first, highest usage first
+    c.riskSkus.sort((a, b) =>
+      a.class.localeCompare(b.class) ||
+      b.avgPerWorkingDay - a.avgPerWorkingDay
+    )
+  })
+
+  return categories
+}
+
+/* =========================
+   CATEGORY SUMMARY + EXCEPTIONS
+   ========================= */
+
+function renderCategoryBlocks(categories) {
+  const r = document.getElementById("rolodex")
+  if (!r) return
+
+  Object.values(categories).forEach(c => {
+    // ---- Category decision label ----
+    const categoryDecision =
+      c.placeOrder > 0
+        ? "IMMEDIATE REPLENISHMENT FOCUS REQUIRED"
+        : c.review > 0
+          ? "MONITOR — PARTIAL COVERAGE"
+          : "STABLE — NO IMMEDIATE ACTION"
+
+    // ---- Category owner cue ----
+    const ownerCue =
+      c.placeOrder > 0
+        ? "Buyer action required"
+        : c.review > 0
+          ? "Planner monitoring"
+          : "No immediate action"
+
+    // ---- CATEGORY SUMMARY BLOCK ----
+    r.innerHTML += `
+      <div class="category-summary">
+        <h2>${c.name}</h2>
+
+        <p>
+          ${c.skuCount} SKUs |
+          ${c.totalDailyUsage.toFixed(1)} units/day |
+          ${(c.totalDailyUsage * 5).toFixed(1)} units/week
+        </p>
+
+        <p>
+          ${c.placeOrder} action |
+          ${c.review} monitor |
+          ${c.covered} covered
+          (${c.riskPercent}% at risk)
+        </p>
+
+        <p>
+          <strong>Coverage:</strong> ${categoryCoverageNarrative(c)}
+        </p>
+
+        <p>
+          <strong>Demand behavior:</strong> ${categoryDemandTrend(c)}
+        </p>
+
+        <p>
+          <strong>24-month category demand:</strong>
+          ~${Math.round(c.plannedQty24m).toLocaleString()} units
+          <br><span class="muted">${PLANNING_DISCLAIMER}</span>
+        </p>
+
+
+        <p><strong>Category stance:</strong> ${categoryDecision}</p>
+        <p><strong>Ownership:</strong> ${ownerCue}</p>
+      </div>
+    `
+
+    // ---- EXCEPTIONS ONLY (TOP 10) ----
+    c.riskSkus.slice(0, 10).forEach(s => {
+      r.innerHTML += `
+        <div class="card card-${s.class}">
+          <div class="card-title">
+            ${s.sku}
+            <span class="badge badge-${s.class}">${s.class}</span>
+          </div>
+          <div class="card-desc">${s.desc}</div>
+          <div class="card-footer">
+            ${s._decision.recommendationText}
+          </div>
+        </div>
+      `
+    })
+  })
+}
+
+
+function renderManagement(){
+  const r = document.getElementById("rolodex")
+  if (!r) return
+  r.innerHTML = ""
+
+  // ---- ENSURE SKU DECISIONS EXIST (CRITICAL LOGIC – PRESERVED)
+  const sorted = [...state.demand].sort((a,b)=>
+    a.class.localeCompare(b.class) ||
+    b.avgPerWorkingDay - a.avgPerWorkingDay ||
+    b.window90.adjusted - a.window90.adjusted ||
+    a.sku.localeCompare(b.sku)
+  )
+
+  sorted.forEach(s=>{
+    const dailyUsage = getPlanningUsage(s)
+// -----------------------------
+// DEAD / INACTIVE SKU GATE
+// -----------------------------
+    const annualDemand = dailyUsage * 260
+    const isDead =
+      (s.window90.adjusted === 0) ||
+      (annualDemand < 6) ||
+      (s.class === "C" && dailyUsage < 0.05)
+    const received = (state.supply[s.sku] || []).filter(x => !x.open && x.leadWeeks)
+    const trueLead =
+      received.length > 0
+        ? median(received.map(x => x.leadWeeks))
+        : null
+
+    let coverageText = "Lead-time coverage: Insufficient data."
+
+    if (dailyUsage > 0 && trueLead !== null && s.currentStock !== null) {
+      const leadDays = trueLead * 7
+      const daysOfCover = s.currentStock / dailyUsage
+
+      coverageText =
+        daysOfCover >= leadDays
+          ? "Lead-time coverage: Inventory covers supplier lead time demand."
+          : "Lead-time coverage: Inventory does NOT cover supplier lead time demand."
+    }
+// ---- OPEN PO VISIBILITY ----
+const supplyEvents = state.supply[s.sku] || []
+
+const today = new Date()
+today.setHours(0,0,0,0)
+
+const openPO = supplyEvents
+  .filter(x => x.open && x.poDate && x.poDate <= today)
+  .sort((a,b) => b.poDate - a.poDate)[0]
+
+let incomingQty = null
+let incomingDate = null
+let shortfall = null
+
+if (openPO && dailyUsage > 0) {
+  incomingQty = openPO.qty || null
+  incomingDate = formatESTDate(openPO.poDate)
+
+  const daysUntilReceipt = Math.max(
+    0,
+    daysBetween(today, openPO.poDate)
+  )
+
+  const demandUntilReceipt = dailyUsage * daysUntilReceipt
+  shortfall =
+    incomingQty !== null
+      ? Math.max(0, demandUntilReceipt - s.currentStock)
+      : null
+}
+
+     s._decision = {
+      trueLeadWeeks: trueLead,
+      coverageText,
+      recommendationText: isDead
+        ? "NO ACTION — SKU is inactive / dead stock based on demand history."
+        : recommendation(s),
+      incomingQty,
+      incomingDate,
+      shortfall
+    };
+  }) // ← CLOSE forEach HERE
+
+  // ---- CATEGORY FIRST VIEW (UNCHANGED OUTPUT)
+  const categories = aggregateByCategory(state.demand)
+  renderCategoryBlocks(categories)
+}
+
+
+function renderValidation(){
+  const v = state.validation
+  const el = document.getElementById("validation-summary")
+  if (!el || !v) return
+
+  const issues = []
+
+  if (v.missingStockCells > 0) {
+    issues.push(`${v.missingStockCells} missing values`)
+  }
+  if (v.invalidStockCells > 0) {
+    issues.push(`${v.invalidStockCells} invalid entries`)
+  }
+  if (v.duplicateSkus.length > 0) {
+    issues.push(`duplicate SKUs`)
+  }
+
+  if (issues.length === 0) {
+    el.textContent =
+      `Data check: OK — no missing values, no errors, ` +
+      `replenishment history detected (${v.replenishmentEvents} events)`
+  } else {
+    el.textContent =
+      `Data check: Attention needed — ` + issues.join(", ")
+  }
+}
+
+
+
+/* =========================
+   MODE
+   ========================= */
+
+function setMode(m){
+  state.mode = m
+
+  const views = ["analyst","management","planning","about"]
+  views.forEach(v=>{
+    document.getElementById(v+"-view")?.classList.toggle("hidden", v!==m)
+    document.getElementById("btn-"+v)?.classList.toggle("active", v===m)
+  })
+
+  if (m === "about") {
+    renderAbout()
+  }
+
+  if (m === "analyst") renderAnalyst()
+  if (m === "management") renderManagement()
+
+  document.getElementById("validation-view")
+    ?.classList.toggle("hidden", m === "about" || m === "planning")
+
+  if (m !== "about" && m !== "planning") {
+    renderValidation()
+  }
+}
+
+
+/* =========================
+   INIT
+   ========================= */
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("cycle-file")?.addEventListener("change",e=>{
+    loadCsv(e.target.files[0], parseDemand)
+  })
+
+  document.getElementById("po-file")?.addEventListener("change",e=>{
+    loadCsv(e.target.files[0], parseSupply)
+  })
+
+  document.getElementById("btn-analyst")?.addEventListener("click",()=>setMode("analyst"))
+  document.getElementById("btn-management")?.addEventListener("click",()=>setMode("management"))
+  document.getElementById("btn-about")?.addEventListener("click",()=>setMode("about"))
+  document.getElementById("btn-planning")
+  ?.addEventListener("click",()=>setMode("planning"))
+
+
+  renderAbout()        // ðŸ‘ˆ KEY FIX
+  setMode("analyst")   // default view
+})
+
+// ---- Door-Equivalent Model ----
+
+// conservative, stable coefficients
+const DOOR_EQUIVALENTS = {
+  single: 1.0,
+  double: 1.9,
+  single_sidelite: 1.5,
+  double_sidelite: 2.5
+}
+
+// inferred historical mix (can be refined later)
+const DEFAULT_MIX = {
+  single: 0.52,
+  double: 0.28,
+  single_sidelite: 0.12,
+  double_sidelite: 0.08
+}
+
+function computeDoorEquivalents(doorsPerDay) {
+  let dePerDoor = 0
+  for (const k in DEFAULT_MIX) {
+    dePerDoor += DEFAULT_MIX[k] * DOOR_EQUIVALENTS[k]
+  }
+  return doorsPerDay * dePerDoor
+}
+
+// ---- Material intensity from history ----
+
+function deriveMaterialPerDE(cycleCounts, purchaseHistory) {
+  // aggregate material usage from purchases
+  const materialTotals = {}
+
+  purchaseHistory.forEach(r => {
+    const mat = r.material
+    if (!materialTotals[mat]) {
+      materialTotals[mat] = {
+        qty: 0,
+        unit: r.unit
+      }
+    }
+    materialTotals[mat].qty += r.quantity
+  })
+
+  // estimate total historical DE from cycle counts
+  const totalDoors = cycleCounts.reduce((s, r) => s + r.doorsProduced, 0)
+  const totalDE = computeDoorEquivalents(totalDoors / cycleCounts.length) * cycleCounts.length
+
+  // material per DE
+  const perDE = {}
+  for (const m in materialTotals) {
+    perDE[m] = {
+      unit: materialTotals[m].unit,
+      perDE: materialTotals[m].qty / totalDE
+    }
+  }
+
+  return perDE
+}
+
+// ---- Planning engine ----
+
+/* =========================
+   PLANNING (TIME-BASED, CORRECT)
+   ========================= */
+
+/*
+Planning definition (LOCKED):
+- Consumables (paint, chemicals, MRO): time-based usage × horizon
+- Production-linked (wood, glass): NOT PLANNED until material-per-door exists
+*/
+
+function runMaterialPlanning() {
+  const workingDays = Number(document.getElementById("workingDays")?.value || 0)
+  if (!workingDays) return
+
+  const tbody = document.querySelector("#materialPlan tbody")
+  if (!tbody) return
+  tbody.innerHTML = ""
+
+  let rowsWritten = 0
+
+  state.demand.forEach(s=>{
+    // Use only SKUs with real, stable consumption
+    if (!s.avgPerWorkingDay || s.avgPerWorkingDay <= 0) return
+
+    const dailyUsage = s.avgPerWorkingDay
+    const plannedQty = dailyUsage * workingDays
+
+    // Skip noise
+    if (plannedQty <= 0) return
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${s.sku}</td>
+        <td>${s.desc}</td>
+        <td>${s.class}</td>
+        <td>${plannedQty.toFixed(1)}</td>
+        <td class="muted">Time-based consumption (planning horizon)</td>
+      </tr>
+    `
+    rowsWritten++
+  })
+
+  if (rowsWritten === 0) {
+    tbody.innerHTML =
+      `<tr><td colspan="5" class="muted">
+        No consumable demand detected for the selected horizon.
+      </td></tr>`
+  }
+}
+function sanitizeText(input) {
+  if (!input) return ""
+  return String(input)
+    .normalize("NFKD")
+    .replace(/[^\x20-\x7E]/g, "")   // drop non-ASCII
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function setPlanningWindow(days) {
+  state.planning.window = days
+  document.querySelectorAll(".plan-btn").forEach(b =>
+    b.classList.toggle("active", b.textContent.startsWith(days))
+  )
+  if (state.mode === "analyst") renderAnalyst()
+  if (state.mode === "management") renderManagement()
+}
+
+const ABOUT_TEXT = document.getElementById("about-view")?.innerHTML || ""
+
+
+
+/* =========================
+   PDF GENERATOR (UI-ALIGNED, WRAP-SAFE)
+   ========================= */
+
+function exportManagementPdf() {
+  const { jsPDF } = window.jspdf
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" })
+
+  const margin = 40
+  const maxWidth = 520
+  const lineHeight = 14
+  const pageHeight = doc.internal.pageSize.height
+
+  let y = 40
+
+  const ensureSpace = lines => {
+    if (y + lines * lineHeight > pageHeight - 40) {
+      doc.addPage()
+      y = 40
+    }
+  }
+
+  const writeLine = text => {
+    const wrapped = doc.splitTextToSize(sanitizeText(text), maxWidth)
+    ensureSpace(wrapped.length)
+    wrapped.forEach(l => {
+      doc.text(l, margin, y)
+      y += lineHeight
+    })
+  }
+
+  // =========================
+  // HEADER
+  // =========================
+  doc.setFont("Helvetica", "bold")
+  doc.setFontSize(14)
+  doc.text("Universal Forecasting Tool — Management Summary", margin, y)
+  y += 20
+
+  doc.setFontSize(9)
+  doc.setFont("Helvetica", "normal")
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, y)
+  y += 24
+
+  // =========================
+// CATEGORY SUMMARY (PDF)
+// =========================
+const categories = aggregateByCategory(state.demand)
+
+Object.values(categories).forEach(c => {
+  ensureSpace(6)
+
+  doc.setFont("Helvetica", "bold")
+  writeLine(`${c.name} — Category Summary`)
+  doc.setFont("Helvetica", "normal")
+
+  writeLine(
+    `${c.skuCount} SKUs | ` +
+    `${c.totalDailyUsage.toFixed(1)} units/day | ` +
+    `${(c.totalDailyUsage * 5).toFixed(1)} units/week`
+  )
+
+  writeLine(categoryCoverageNarrative(c))
+  writeLine(categoryDemandTrend(c))
+
+  writeLine(
+    `24-month expected consumption: ~${Math.round(c.plannedQty24m).toLocaleString()} units.`
+  )
+  writeLine(PLANNING_DISCLAIMER)
+
+  y += 12
+})
+
+
+
+  // =========================
+  // SORT SAME AS UI
+  // =========================
+  const items = [...state.demand].sort((a, b) =>
+    a.class.localeCompare(b.class) ||
+    b.avgPerWorkingDay - a.avgPerWorkingDay ||
+    a.sku.localeCompare(b.sku)
+  )
+
+  items
+  .filter(s => s._decision?.incomingQty || s._decision?.incomingDate)
+  .forEach(s => {
+
+
+
+    // =========================
+    // SKU HEADER
+    // =========================
+    doc.setFont("Helvetica", "bold")
+    writeLine(`${s.sku} | Class ${s.class} | ${s.avgPerWorkingDay.toFixed(2)} units/day`)
+    y += 4
+
+    doc.setFont("Helvetica", "normal")
+
+    // =========================
+    // CORE METRICS (MATCH UI)
+    // =========================
+    writeLine(`Description: ${s.desc || "Not provided"}`)
+    writeLine(`Vendor: ${s.vendor || "Not provided"}`)
+    writeLine(
+      `Usage (30/60/90): ` +
+      `${s.window30.adjusted.toFixed(2)} / ` +
+      `${s.window60.adjusted.toFixed(2)} / ` +
+      `${s.window90.adjusted.toFixed(2)}`
+    )
+
+    writeLine(
+      `Planning rate (90d): ` +
+      `${s.avgPerWorkingDay.toFixed(2)} / day ` +
+      `(${(s.avgPerWorkingDay * 5).toFixed(1)} / week)`
+    )
+
+    // =========================
+    // SUPPLY (SAME LOGIC AS UI)
+    // =========================
+    const supply = state.supply[s.sku] || []
+
+    const today = new Date()
+    today.setHours(0,0,0,0)
+
+    // latest OPEN PO DATE ≤ today
+    const openOrder = supply
+      .filter(x => x.open && x.poDate && x.poDate <= today)
+      .sort((a,b) => b.poDate - a.poDate)[0]
+
+    // === USE MANAGEMENT DECISION (SINGLE SOURCE OF TRUTH) ===
+    const decision = s._decision
+
+    writeLine(
+      `Observed supplier lead time: ${
+        decision.trueLeadWeeks !== null
+          ? `${Math.round(decision.trueLeadWeeks * 7)} calendar days (${s.vendor})`
+          : "Insufficient history"
+      }`
+    )
+
+
+    writeLine(
+      `Next receipt: ${
+        decision.incomingQty && decision.incomingDate
+          ? `~${decision.incomingQty} units expected on ${decision.incomingDate}`
+          : openOrder
+            ? `Open order (PO date ${formatESTDate(openOrder.poDate)})`
+            : "None"
+      }`
+    )
+
+
+    // =========================
+    // DECISION / RISK
+    // =========================
+    writeLine(s._decision.recommendationText
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, ""))
+
+
+    // =========================
+    // DIVIDER
+    // =========================
+    y += 8
+    doc.setDrawColor(55, 65, 81)
+    doc.line(margin, y, margin + maxWidth, y)
+    y += 16
+  })
+
+  doc.save("Forecasting_Management_Summary.pdf")
+}
+
+document.getElementById("btn-export")?.addEventListener("click", () => {
+  if (state.mode !== "management") {
+    alert("Switch to Management view before exporting.")
+    return
+  }
+  exportManagementPdf()
+})
+
+
+

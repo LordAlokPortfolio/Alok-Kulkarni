@@ -1,0 +1,246 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Universal Forecasting Tool — v2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<style>
+body{background:#0b1120;color:#e5e7eb;margin:0;font-family:system-ui}
+.page{max-width:1400px;margin:auto;padding:20px}
+.hidden{display:none}
+button{cursor:pointer}
+
+.toggle-container{display:flex;gap:8px;justify-content:flex-end}
+.toggle-button{padding:6px 14px;border-radius:18px;border:1px solid #38bdf8;background:none;color:#38bdf8}
+.toggle-button.active{background:#38bdf8;color:#0b1120;font-weight:700}
+
+input[type=file]{background:#020617;color:#e5e7eb;border:1px solid #1f2937;padding:6px;border-radius:6px}
+
+.snap-container{height:75vh;overflow-y:auto;scroll-snap-type:y mandatory}
+.card{background:#111827;border-radius:12px;padding:16px;margin-bottom:16px;scroll-snap-align:start;border-left:6px solid #374151}
+.card-A{border-left-color:#22c55e}
+.card-B{border-left-color:#facc15}
+.card-C{border-left-color:#64748b}
+
+.card-title{font-size:18px;font-weight:700}
+.card-desc{color:#9ca3af;font-size:14px;margin-top:2px}
+.card-body{margin-top:10px;line-height:1.45}
+.card-footer{margin-top:10px;border-top:1px solid #1f2937;padding-top:8px;font-weight:600}
+
+.inline-edit{background:#020617;border:1px solid #374151;color:#e5e7eb;border-radius:4px;padding:4px}
+
+.about{max-width:900px;line-height:1.6}
+.about h3{margin-top:24px}
+.muted{color:#9ca3af}
+
+/* Planning window */
+.plan-window{display:flex;gap:6px;margin:10px 0}
+.plan-btn{padding:4px 10px;border-radius:14px;border:1px solid #334155;background:none;color:#cbd5f5}
+.plan-btn.active{background:#334155;font-weight:700}
+
+/* Validation */
+.validation{margin-top:10px;padding:10px;border:1px solid #1f2937;border-radius:8px;background:#020617}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+<!-- MODE TOGGLE -->
+<div class="toggle-container">
+  <button id="btn-analyst" class="toggle-button active">Analyst</button>
+  <button id="btn-management" class="toggle-button">Management</button>
+  <button id="btn-about" class="toggle-button">About</button>
+  <button id="btn-planning" class="toggle-button">Planning</button>
+  <button id="btn-export" class="toggle-button">Export PDF</button>
+</div>
+
+<!-- ANALYST -->
+<div id="analyst-view">
+<label>
+  PO Date format:
+  <select id="po-date-format">
+    <option value="AUTO">Auto-detect</option>
+    <option value="ISO">YYYY-MM-DD</option>
+    <option value="DMY">DD/MM/YYYY</option>
+    <option value="MDY">MM/DD/YYYY</option>
+    <option value="EXCEL">Excel serial</option>
+  </select>
+</label>
+
+  <!-- FILE INPUTS -->
+  <div style="margin:10px 0">
+    <div>
+      <strong>Cycle Count CSV (required)</strong><br>
+      <input id="cycle-file" type="file" accept=".csv">
+    </div>
+    <div style="margin-top:6px">
+      <strong>Purchase History CSV (optional)</strong><br>
+      <input id="po-file" type="file" accept=".csv">
+    </div>
+  </div>
+
+  <!-- PLANNING WINDOW -->
+  <div class="plan-window">
+    <span class="muted">Planning window:</span>
+    <button id="btn-win-30" class="plan-btn">30d</button>
+    <button id="btn-win-60" class="plan-btn">60d</button>
+    <button id="btn-win-90" class="plan-btn active">90d</button>
+  </div>
+  <table width="100%" cellspacing="0">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Class</th>
+        <th>Avg / WD</th>
+        <th>30d</th>
+        <th>60d</th>
+        <th>90d</th>
+      </tr>
+    </thead>
+    <tbody id="analyst-body"></tbody>
+  </table>
+</div>
+<div id="planning-view" class="hidden">
+  <section class="panel">
+    <h2>Production Planning (BOM-less)</h2>
+
+    <div class="planning-inputs">
+      <label>
+        Doors per day
+        <input type="number" id="doorsPerDay" value="45" min="1" />
+      </label>
+
+      <label>
+        Working days per year
+        <input type="number" id="workingDays" value="250" min="1" />
+      </label>
+
+      <button id="runPlanning">Calculate Material Plan</button>
+    </div>
+
+    <table id="materialPlan">
+      <thead>…</thead>
+      <tbody></tbody>
+    </table>
+
+  </section>
+</div>
+
+<style>
+  .planning-inputs {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+  }
+  #materialPlan th, #materialPlan td {
+    padding: 6px 10px;
+    text-align: right;
+  }
+  #materialPlan th:first-child,
+  #materialPlan td:first-child {
+    text-align: left;
+  }
+</style>
+
+
+<!-- MANAGEMENT -->
+<div id="management-view" class="hidden">
+  <div class="snap-container" id="rolodex"></div>
+</div>
+
+<!-- VALIDATION -->
+<div id="validation-view" class="hidden">
+  <div id="validation-summary" class="validation muted"></div>
+</div>
+
+<!-- ABOUT (REPLACE ENTIRE about-view BLOCK IN index.html) -->
+<div id="about-view" class="hidden about">
+  <h2>About This Tool</h2>
+  <p>
+    Universal Forecasting Tool is a client-only demand planning application built
+    to demonstrate practical, real-world demand planning using consumption-based data.
+    It reflects how demand planners analyze true demand signals in manufacturing
+    environments where transactional demand history is incomplete or distorted.
+  </p>
+
+  <h3>Purpose</h3>
+  <p>
+    Operational systems often blend demand signals with supply events such as receipts,
+    open orders, and timing variability. This can obscure true consumption patterns.
+    This tool was built to isolate demand from inventory movements, enabling clearer
+    planning decisions before supply constraints are applied.
+  </p>
+
+  <h3>Data Inputs</h3>
+  <ul>
+    <li><strong>Cycle count history (required):</strong> Used as the primary demand signal</li>
+    <li><strong>Purchase history (optional):</strong> Used for supplier visibility and observed lead-time analysis</li>
+  </ul>
+
+  <h3>Methodology</h3>
+  <p>
+    Demand is derived strictly from stock reductions observed between consecutive
+    cycle counts. Usage is normalized by working days, excluding weekends and statutory
+    holidays, to ensure comparability across time periods.
+  </p>
+  <p>
+    Demand behavior is evaluated using rolling 30, 60, and 90-day windows to balance
+    short-term responsiveness with trend stability. Longer-term outlooks extend this
+    demand signal into a 0–24 month planning horizon.
+  </p>
+
+  <h3>Planning Views</h3>
+  <ul>
+    <li>
+      <strong>Analyst View:</strong> Exposes detailed calculations, adjusted usage rates,
+      classification logic, and validation metrics used to derive demand.
+    </li>
+    <li>
+      <strong>Management View:</strong> Translates analytical outputs into
+      decision-focused SKU summaries and planning recommendations.
+    </li>
+  </ul>
+
+  <h3>Data Handling & Privacy</h3>
+  <p>
+    All calculations are executed entirely within the browser.
+    No data is stored, transmitted, or logged. Uploaded files remain local to the
+    active session and are discarded upon refresh.
+  </p>
+
+  <h3>Authorship</h3>
+  <p>
+    Designed and implemented as an independent demand planning prototype by
+    Alok Kulkarni, reflecting production manufacturing planning workflows.
+  </p>
+
+  <h3>Version</h3>
+  <p class="muted">
+    Universal Forecasting Tool — Version 14.1<br>
+    Client-only • Consumption-based demand • Short-term execution and 0–24 month outlook
+  </p>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script src="main.js"></script>
+
+<script>
+/* Planning window buttons */
+document.getElementById("btn-win-30").onclick=()=>setPlanningWindow(30)
+document.getElementById("btn-win-60").onclick=()=>setPlanningWindow(60)
+document.getElementById("btn-win-90").onclick=()=>setPlanningWindow(90)
+document.getElementById("po-date-format")?.addEventListener("change", e => {
+  state.supplyDateFormat = e.target.value
+})
+
+</script>
+
+</body>
+</html>
+
