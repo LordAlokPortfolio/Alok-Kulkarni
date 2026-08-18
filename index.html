@@ -202,6 +202,12 @@
     wrong, which is work. Shelf and paperwork disagree in a way the data cannot resolve, which
     is for reading and not for fixing. And nothing impossible found, which is not the same as
     right, and is labelled so it does not get read that way.</p>
+  <p>In practice it runs one category at a time, straight after that category's counts are
+    entered. You pick the category, run the check, and it shows you how the stock behaved
+    against everything recorded since the last count. What comes back is one of two jobs: go and
+    look at the shelf again, because the count is wrong, or find the movement nobody entered,
+    because the count is right and the paperwork is behind. Those need different people, which
+    is why the check has to say which one it is rather than just flagging a number.</p>
   <p><b>Analysis.</b> Daily usage rates derived from movement history rather than typed in.
     Minimum stock levels rebuilt from what actually got received, replacing numbers nobody could
     source. Consumption forecasting across three product lines, so material is ordered against
@@ -340,32 +346,55 @@
 
 <div class="item">
   <h3><a href="https://github.com/LordAlokPortfolio/Alok-Kulkarni/tree/universal-forecasting-tool/universal-forecasting-tool">Consumption forecasting tool</a></h3>
-  <p class="hook">Reads a cycle count export, works out how fast each item is really moving,
-    forecasts forward, and then measures how wrong its own forecast has been.</p>
+  <p class="hook">You give it a stock count sheet. It works out how fast each item is really
+    being used, says what it expects next, and then checks how wrong it was last time.</p>
   <p class="meta">TypeScript · JavaScript · runs in a browser, no server</p>
-  <p>Usage is calculated per working day, not per calendar day. Two counts eleven days apart
-    with a weekend and a statutory holiday between them span six working days, not eleven, and
-    dividing by calendar days understates consumption on exactly the items that matter. It also
-    separates stock that never moves from stock that barely moves, because those need different
-    decisions, and reads a rise between counts as a delivery rather than as negative usage.</p>
-  <p>The part I would point at is that it computes its own error. After forecasting it scores
-    itself against the history it already has, so it reports how much to trust it instead of
-    producing one confident number with nothing behind it.</p>
-  <p class="note"><b>Found in review, and it is the reason this is worth reading.</b> The date
-    parser accepted numeric dates written with slashes but not with hyphens, and these exports
-    mix both in a single header row. It was silently discarding 53 of 128 count columns in one
-    real file and 18 of 48 in another, then producing confident usage rates from the 59% that
-    survived. It never errored. A tool that fails is obvious; one that quietly uses half your
-    history is not. Fixed and measured: on the sample file the old parser produced 7 intervals
-    per item and the fixed one produces 14. Two other things came out of the same review: a
-    supplier name hardcoded in the shipped JavaScript that did not exist in the TypeScript
-    source, and a TypeScript rewrite that turned out not to be a newer version of the program
-    at all but an unfinished one the page cannot run. All three are written up in the repository
-    rather than quietly corrected.</p>
+  <p>Usage is worked out per working day, not per day on the calendar. If two counts are eleven
+    days apart with a weekend and a holiday in between, only six of those were days anyone could
+    have used anything. Divide by eleven and a fast moving item looks slow. The longer the gap,
+    the more wrong it gets.</p>
+  <p>It also tells apart three things that look the same on a sheet and need different decisions:
+    stock being used steadily, stock used now and then, and stock that has not moved at all. And
+    when a count comes back higher than the one before it, that is a delivery arriving, not
+    usage running backwards.</p>
+  <p>The part worth pointing at: after it makes a prediction, it goes back over the counts it
+    already has and works out how far off that prediction would have been. So it tells you how
+    much to trust it, instead of handing you one number with no way to judge it.</p>
+  <p class="note"><b>What was wrong with it.</b> The sheet has one column for every day you
+    counted. Some of those dates were written 12/15/2025 and some 12-12-2025, in the same row,
+    because that is what the export does. The tool only recognised the ones with slashes and
+    threw the rest away without saying so: 53 of the 128 counting days in one real file, 18 of
+    48 in another. It did not stop and it did not warn. It worked out usage from the six days in
+    ten it still had, and reported the answer as confidently as if it had all of them. A tool
+    that breaks is obvious. One that quietly uses half your history is not. It now reads every
+    counting day, and I checked that on the sample file before saying so.</p>
+  <p class="note"><b>Two more things from the same read.</b> A supplier's name was written into
+    the version that actually runs, but not into the source file anyone would open to check for
+    exactly that. And a rewrite I had assumed was the newer version turned out to be unfinished
+    and unable to run at all. Both are written up in the repository rather than quietly tidied
+    away.</p>
 </div>
 
 <h2>Smaller tools</h2>
 <p class="caption">Separate from the workbook system above, and worth a line each.</p>
+
+<div class="item">
+  <h3>Daily reports, and an inbox you can ask questions</h3>
+  <p class="hook">Two flows that run without anyone opening anything.</p>
+  <p class="meta">Power Automate · Outlook · Excel</p>
+  <p>One goes out every morning: the low stock list, emailed to my manager before either of us
+    has looked at anything. The point is not the email. It is that the conversation starts from
+    the same numbers every day, instead of from whoever happened to check last and what they
+    happened to notice.</p>
+  <p>The other turns the inbox into a lookup. You send an email with a set subject line, either
+    a specific item or a rough description, and it replies with the details. There is no app to
+    install, nothing to log into and nothing to learn, because everyone already knows how to
+    send an email. The only new thing is one line of text.</p>
+  <p class="note"><b>Measured by.</b> Colleagues still use the lookup, without me, and nobody
+    was told to. That is the only measurement I have on it, and it is the same one I trust on
+    the tablet at the CNC: anything people find annoying stops being used inside a week, quietly
+    and without anyone saying so.</p>
+</div>
 
 <div class="item">
   <h3>ERP extraction</h3>
