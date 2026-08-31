@@ -26,6 +26,10 @@
   }
   .wrap{max-width:660px;margin:0 auto;padding:80px 26px 120px}
   a{color:var(--accent)}
+  .contact a{transition:opacity 150ms ease-out}
+  @media (hover:hover) and (pointer:fine){
+    .contact a:hover{opacity:.7}
+  }
 
   header{margin-bottom:56px}
   h1{font-size:34px;letter-spacing:-.02em;margin:0 0 10px;font-weight:650}
@@ -64,9 +68,16 @@
   .demo span{
     display:inline-block;background:var(--accent);color:#fff;
     font-size:16px;font-weight:600;padding:11px 20px;border-radius:6px;
+    transition:filter 150ms ease-out,transform 150ms ease-out;
   }
   .demo small{display:block;font-size:14px;color:var(--faint);margin-top:9px}
-  .demo:hover span{filter:brightness(1.12)}
+  @media (hover:hover) and (pointer:fine){
+    .demo:hover span{filter:brightness(1.12)}
+  }
+  .demo:active span{transform:scale(.97)}
+  @media (prefers-reduced-motion:reduce){
+    .contact a,.demo span{transition:none}
+  }
 
   .role{margin:0 0 30px}
   .role h3{font-size:18px;margin-bottom:3px}
