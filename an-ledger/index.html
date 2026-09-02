@@ -614,7 +614,7 @@
       var fill = val < 0 ? 'var(--dim)' : (over ? 'var(--red)' : 'var(--green)');
       svg += '<rect x="' + x + '" y="' + yTop + '" width="' + barW + '" height="' + barH + '" fill="' + fill + '"/>';
       svg += '<text x="' + (x + barW/2) + '" y="' + (h - padB + 14) + '" font-size="10" fill="var(--dim)" text-anchor="middle">' + monthLabel(m) + '</text>';
-      var labelY = val >= 0 ? (yTop - 4) : (yBot + 12);
+      var labelY = val >= 0 ? (yTop - 4) : Math.min(yBot + 12, h - padB - 4);
       svg += '<text x="' + (x + barW/2) + '" y="' + labelY + '" font-size="10" fill="var(--ink)" text-anchor="middle">' + money(val) + '</text>';
     });
     svg += '</svg>';
