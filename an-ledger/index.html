@@ -147,7 +147,7 @@
 <div class="wrap">
   <p class="kicker">A&amp;N Ledger</p>
   <h1>Spending dashboard</h1>
-  <p class="lede">Pick a raw Amex export (.csv or .xlsx). Any metadata rows above the real table are skipped automatically. Nothing leaves this machine except the merchant/amount pairs you explicitly send to OpenAI to categorize.</p>
+  <p class="lede">Pick a raw Amex export (.csv or .xlsx). Any metadata rows above the real table are skipped automatically. Nothing leaves this machine except the merchant, amount, and (when the file has them) description/address/city fields you explicitly send to OpenAI to categorize.</p>
 
   <div class="step">
     <h2>Load statement</h2>
@@ -168,6 +168,11 @@
       <button id="catBtn">Categorize rows</button>
     </div>
     <p class="msg" id="catError"></p>
+    <div id="manualCatWrap" style="display:none;margin-top:10px">
+      <p class="note" id="manualCatNote"></p>
+      <div class="tablewrap"><table id="manualCatTable"></table></div>
+      <button id="manualSaveBtn" style="margin-top:8px">Save these categories</button>
+    </div>
     <pre class="note" id="verifySummary" style="display:none;white-space:pre-wrap"></pre>
     <div class="row-flex" style="margin-top:10px;flex-direction:column;align-items:flex-start;gap:6px">
       <button id="downloadBtn" style="display:none">Download categorized CSV</button>
@@ -227,6 +232,10 @@
   var catNote = document.getElementById('catNote');
   var catError = document.getElementById('catError');
   var catBtn = document.getElementById('catBtn');
+  var manualCatWrap = document.getElementById('manualCatWrap');
+  var manualCatNote = document.getElementById('manualCatNote');
+  var manualCatTable = document.getElementById('manualCatTable');
+  var manualSaveBtn = document.getElementById('manualSaveBtn');
   var downloadBtn = document.getElementById('downloadBtn');
   var downloadWarning = document.getElementById('downloadWarning');
   var postDownloadMsg = document.getElementById('postDownloadMsg');
@@ -368,6 +377,8 @@
     downloadWarning.style.display = 'none';
     postDownloadMsg.style.display = 'none';
     verifySummary.style.display = 'none';
+    manualCatWrap.style.display = 'none';
+    manualCatTable.innerHTML = '';
     catError.textContent = '';
     categorizedThisSession = 0;
 
@@ -389,6 +400,10 @@
     }
     cols.card = norm.indexOf('card');
     cols.category = norm.indexOf('category');
+    // Optional extra context for categorizing, only used if the file has it.
+    cols.description = norm.indexOf('description');
+    cols.address = norm.indexOf('address');
+    cols.cityProvince = norm.indexOf('city / province');
 
     var body = table.slice(headerIdx + 1).filter(function(line){
       return line.some(function(f){ return f.trim() !== ''; });
@@ -433,6 +448,7 @@
       catStep.style.display = 'block';
       catNote.textContent = uncategorized.length + ' row' + (uncategorized.length === 1 ? '' : 's') + ' uncategorized.';
       catBtn.textContent = 'Categorize ' + uncategorized.length + ' rows';
+      renderManualCategorize();
     }
 
     buildCardFilter();
@@ -452,6 +468,9 @@
         amount: parseAmount(line[idx.amount] || ''),
         category: (line[idx.category] || '').trim(),
         card: idx.card === -1 ? 'Amex' : ((line[idx.card] || '').trim() || 'Amex'),
+        description: idx.description === -1 ? '' : (line[idx.description] || '').trim(),
+        address: idx.address === -1 ? '' : (line[idx.address] || '').trim(),
+        cityProvince: idx.cityProvince === -1 ? '' : (line[idx.cityProvince] || '').trim(),
         line: r
       };
     });
@@ -482,11 +501,20 @@
     catBtn.disabled = true;
     catBtn.textContent = 'Categorizing…';
 
-    var payload = targets.map(function(r){ return { merchant: r.merchant, amount: r.amount }; });
+    var payload = targets.map(function(r){
+      var row = { merchant: r.merchant, amount: r.amount };
+      if (r.description) row.description = r.description;
+      if (r.address) row.address = r.address;
+      if (r.cityProvince) row.cityProvince = r.cityProvince;
+      return row;
+    });
     var system = 'You categorize personal credit card transactions into exactly one of these categories: ' +
-      CATEGORIES.join(', ') + '. If you are not confident, answer UNCLEAR. Never invent a category outside this list.';
-    var user = 'Return a JSON array of category strings, one per transaction, in the same order as this input:\n' +
-      JSON.stringify(payload);
+      CATEGORIES.join(', ') + '. Use every field given for a transaction (merchant, amount, and description/address/' +
+      'cityProvince when present) together to identify the actual place and pick the single best category. ' +
+      'If you are not confident, answer UNCLEAR. Never invent a category outside this list. Return exactly one ' +
+      'category per transaction, in the same order given, with no extra or missing entries.';
+    var user = 'Return a JSON object of the form {"categories": [...]}, with exactly one category string per ' +
+      'transaction below, in the same order:\n' + JSON.stringify(payload);
 
     fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -509,11 +537,14 @@
       var content = data.choices[0].message.content;
       var parsed = JSON.parse(content);
       var list = Array.isArray(parsed) ? parsed : (parsed.categories || Object.values(parsed)[0]);
+      console.log('A&N Ledger: categorize request sent', payload);
+      console.log('A&N Ledger: categorize response received', list);
       if (!Array.isArray(list)){
-        throw new Error('Model returned an unexpected shape. File not modified.');
+        throw new Error('Model returned an unexpected shape (see console for what came back). File not modified.');
       }
       if (list.length !== expectedCount){
-        throw new Error('Expected ' + expectedCount + ' categories, got ' + list.length + '. File not modified.');
+        throw new Error('Expected ' + expectedCount + ' categories, got ' + list.length +
+          ' (see console for the exact list OpenAI returned). File not modified — use the table below to fix rows by hand.');
       }
 
       // Only the Category cell of each target row is written. Every other
@@ -539,12 +570,67 @@
       showVerifySummary();
       buildCardFilter();
       renderDashboard();
+      renderManualCategorize();
     }).catch(function(err){
       catError.textContent = err.message;
+      renderManualCategorize();
     }).finally(function(){
       catBtn.disabled = false;
     });
   }
+
+  // Lets rows OpenAI didn't handle (a failed/mismatched request, or a
+  // low-confidence UNCLEAR) get a category typed in by hand, right away,
+  // without waiting on another API call. Only ever writes into a row's
+  // own Category cell, same as the AI path, and only for rows chosen here.
+  function renderManualCategorize(){
+    var blank = rows.filter(function(r){ return !r.category; });
+    if (!blank.length){
+      manualCatWrap.style.display = 'none';
+      manualCatTable.innerHTML = '';
+      return;
+    }
+    manualCatWrap.style.display = 'block';
+    manualCatNote.textContent = 'Set a category by hand for any row below (leave the rest as Choose… to skip them for now):';
+    var options = '<option value="">Choose…</option>' + CATEGORIES.map(function(c){
+      return '<option value="' + c + '">' + c + '</option>';
+    }).join('');
+    manualCatTable.innerHTML = '<thead><tr><th>Merchant</th><th>Amount</th><th>Category</th></tr></thead><tbody>' +
+      blank.map(function(r){
+        return '<tr><td>' + r.merchant + '</td><td>' + money(r.amount) + '</td>' +
+          '<td><select data-line="' + r.line + '">' + options + '</select></td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  manualSaveBtn.addEventListener('click', function(){
+    var selects = manualCatTable.querySelectorAll('select');
+    var updated = 0;
+    selects.forEach(function(sel){
+      var val = sel.value;
+      if (!val) return;
+      var line = parseInt(sel.getAttribute('data-line'), 10);
+      // Only ever writes a row that is still blank right now, same guarantee as the AI path.
+      if (!(dataRows[line][idx.category] || '').trim()){
+        dataRows[line][idx.category] = val;
+        updated++;
+      }
+    });
+    if (!updated) return;
+    categorizedThisSession += updated;
+    rebuildRows();
+
+    var remaining = rows.filter(function(r){ return !r.category; }).length;
+    catNote.textContent = remaining
+      ? remaining + ' row' + (remaining === 1 ? '' : 's') + ' still uncategorized.'
+      : 'All rows categorized.';
+    catBtn.textContent = remaining ? ('Categorize ' + remaining + ' rows') : 'Categorize rows';
+    downloadBtn.style.display = 'inline-block';
+    downloadWarning.style.display = 'block';
+    showVerifySummary();
+    buildCardFilter();
+    renderDashboard();
+    renderManualCategorize();
+  });
 
   function showVerifySummary(){
     var unchanged = originalRowCount - categorizedThisSession;

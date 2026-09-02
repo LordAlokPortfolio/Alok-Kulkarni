@@ -52,16 +52,18 @@ The dashboard handles the rest of the raw export on its own:
   statement period) above the real table. The dashboard scans the first
   30 rows for the one that actually contains `Date`, `Merchant`, and
   `Amount` and treats everything above it as ignorable.
-- Extra columns the export includes (`Description`, `Address`, `City /
-  Province`, `Postal Code`, `Country`, `Reference`, and similar) are
-  matched by header name and just ignored; nothing needs deleting.
+- Extra columns the export includes are matched by header name; nothing
+  needs deleting. `Description`, `Address`, and `City / Province` are
+  used as extra context when categorizing (see below); anything else
+  (`Postal Code`, `Country`, `Reference`, and similar) is just ignored.
 - If there's no `Category` column at all, one is added automatically,
   blank, exactly as if every row already had an empty `Category` cell.
-  From there, either use "Categorize rows" to fill it via OpenAI, or type
-  categories in by hand after downloading: one of Groceries, Dining,
-  Fuel, Transport, Utilities, Phone/Internet, Subscriptions, Insurance,
-  Medical, Household, Clothing, Travel, Entertainment, Fees/Interest,
-  Payment, Other, UNCLEAR.
+  From there, either use "Categorize rows" to fill it via OpenAI, or set
+  categories by hand right on the page (see "Categorizing new rows"
+  below), or type them into the downloaded CSV directly: one of
+  Groceries, Dining, Fuel, Transport, Utilities, Phone/Internet,
+  Subscriptions, Insurance, Medical, Household, Clothing, Travel,
+  Entertainment, Fees/Interest, Payment, Other, UNCLEAR.
 - A `Card` column is optional; add one only if more than one card's
   transactions are tracked together in the same file.
 
@@ -94,14 +96,24 @@ the first 30 rows, the tool says so and refuses to load the file.
 
 **Categorizing new rows:** newly appended transactions won't have a
 `Category` yet. The page shows how many and offers a "Categorize rows"
-button. Only on click does it send the merchant name and amount for just
-those rows to the OpenAI API (`gpt-4o-mini`), nothing else in the file,
-and rows that already have a category are never touched. The OpenAI API
-key is entered in a password field on the page; it's stored only in that
-browser's `localStorage` and is never written to a file. After
-categorizing, a verification summary and a "Download categorized CSV"
-button allow saving the result back over the source file. Keep a backup
-first.
+button. Only on click does it send merchant, amount, and, when the file
+has them, `Description`, `Address`, and `City / Province` for just those
+rows to the OpenAI API (`gpt-4o-mini`) — richer context than merchant
+alone, so the model identifies the actual place more reliably — nothing
+else in the file, and rows that already have a category are never
+touched. The OpenAI API key is entered in a password field on the page;
+it's stored only in that browser's `localStorage` and is never written to
+a file.
+
+If the API call fails, returns the wrong number of categories, or leaves
+a row `UNCLEAR`, a small table appears listing every still-blank row with
+a dropdown to set its category by hand, on the spot, no retry needed —
+that table is always available, even before trying "Categorize rows" at
+all.
+
+After categorizing (by AI, by hand, or both), a verification summary and
+a "Download categorized CSV" button allow saving the result back over the
+source file. Keep a backup first.
 
 **Opening it:** double-click `an-ledger/index.html`.
 
