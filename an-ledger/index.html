@@ -586,7 +586,7 @@
   function renderChart(months, byMonth, ceiling){
     var chart = document.getElementById('chart');
     if (!months.length){ chart.innerHTML = ''; return; }
-    var w = 820, h = 260, padL = 60, padB = 30, padT = 16, padR = 16;
+    var w = 820, h = 260, padL = 60, padB = 30, padT = 28, padR = 16;
     var innerW = w - padL - padR, innerH = h - padT - padB;
     var barGap = 10;
     var barW = Math.max(8, innerW / months.length - barGap);
@@ -602,7 +602,7 @@
     svg += '<line x1="' + padL + '" y1="' + zeroY + '" x2="' + (w-padR) + '" y2="' + zeroY + '" stroke="var(--rule)" stroke-width="1"/>';
     var ceilY = yFor(ceiling);
     svg += '<line x1="' + padL + '" y1="' + ceilY + '" x2="' + (w-padR) + '" y2="' + ceilY + '" stroke="var(--red)" stroke-width="1.5" stroke-dasharray="4 3"/>';
-    svg += '<text x="' + (w-padR) + '" y="' + (ceilY - 4) + '" font-size="10" fill="var(--red)" text-anchor="end">ceiling ' + money(ceiling) + '</text>';
+    svg += '<text x="' + padL + '" y="14" font-size="10" fill="var(--red)" text-anchor="start">ceiling ' + money(ceiling) + '</text>';
 
     months.forEach(function(m, i){
       var val = byMonth[m].total;
