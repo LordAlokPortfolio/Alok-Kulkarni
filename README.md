@@ -12,9 +12,35 @@ the repository.
 
 Two independent static HTML tools, sharing a visual language and nothing
 else: no server, no build step, no npm install, no network calls except
-the one explicit OpenAI request described below. Both run for any Amex
-cardholder by double-clicking the file in a browser — no account, no
-setup, no install.
+the one explicit OpenAI request described below. Both run by
+double-clicking the file in a browser — no account, no install.
+
+## Getting started from a real Amex export
+
+Amex's own CSV export does **not** already match what the dashboard
+expects — it needs a small one-time fix before the first load:
+
+1. Download the repository (or just the `an-ledger/` folder) and open
+   `an-ledger/index.html` by double-clicking it.
+2. Export transactions from the Amex site as CSV.
+3. Open that CSV in a spreadsheet and rename its columns to exactly
+   `Date`, `Merchant`, `Amount`, `Category` (Amex typically calls these
+   something like Date, Description, Amount — the names have to match,
+   the tool reads by header name). Add a `Card` column too if more than
+   one card's transactions are being tracked together; otherwise skip it.
+4. Add a `Category` column if there isn't one. It can be left **entirely
+   blank** — the dashboard will still load the file, and the "Categorize
+   rows" button will offer to fill every blank row in one pass using
+   OpenAI's API (a personal API key is required, and each categorize
+   call costs a small, per-request amount on that account). Categories
+   can also just be typed in by hand instead, using one of: Groceries,
+   Dining, Fuel, Transport, Utilities, Phone/Internet, Subscriptions,
+   Insurance, Medical, Household, Clothing, Travel, Entertainment,
+   Fees/Interest, Payment, Other, UNCLEAR — no OpenAI key needed if so.
+5. Save that CSV and load it into `index.html` via the file picker.
+
+From then on, the same file is reused: new transactions get appended to
+the bottom each month (not a new file each time) and reloaded.
 
 ## `an-ledger/index.html` — spending dashboard
 
@@ -22,12 +48,11 @@ Loads a CSV of transactions and shows a monthly bar chart against an
 editable spend ceiling, a month-by-category breakdown, and which month(s)
 went over.
 
-**Maintaining a running CSV:** the intended use is one CSV file that gets
-added to each month — export new transactions from the Amex statement
-sheet, append them to the end of the same file (don't create a new file
-each month), and sort by date. By the end of the year it covers every
-month in one file. That file is loaded into the tool each time; the tool
-re-reads the whole thing from scratch.
+See "Getting started from a real Amex export" above for the one-time
+setup. After that, it's one running CSV file: new transactions get
+appended to the end (not a new file each month) and sorted by date, and
+that same file is reloaded into the tool each time — the tool re-reads
+the whole thing from scratch, it doesn't remember anything between loads.
 
 **Required columns** (case-insensitive, matched by header name, not
 position): `Date`, `Merchant`, `Amount`, `Category`. `Amount` is positive
