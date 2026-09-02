@@ -167,8 +167,11 @@
       <button id="catBtn">Categorize rows</button>
     </div>
     <p class="msg" id="catError"></p>
-    <div class="row-flex" style="margin-top:10px">
+    <pre class="note" id="verifySummary" style="display:none;white-space:pre-wrap"></pre>
+    <div class="row-flex" style="margin-top:10px;flex-direction:column;align-items:flex-start;gap:6px">
       <button id="downloadBtn" style="display:none">Download categorized CSV</button>
+      <p class="note" id="downloadWarning" style="display:none">This will replace your original file. Keep a backup.</p>
+      <p class="note" id="postDownloadMsg" style="display:none"></p>
     </div>
   </div>
 
@@ -210,8 +213,13 @@
   var CEIL_KEY = 'anledger-ceiling';
   var API_KEY_KEY = 'anledger-openai-key';
 
-  var rows = []; // {date, month, merchant, amount, category, card}
-  var headerMap = null;
+  var rows = []; // derived, rebuilt from dataRows on every parse/categorize: {date, month, merchant, amount, category, card, line}
+  var headerRow = null;   // original header cells, exact text, original order
+  var dataRows = null;    // original data cells, mutated only in the Category column
+  var originalSnapshot = null; // deep copy of dataRows at load time, for download-time comparison
+  var originalRowCount = 0;
+  var idx = null;         // {date, merchant, amount, category, card|-1} column indexes into dataRows
+  var categorizedThisSession = 0;
 
   var loadError = document.getElementById('loadError');
   var catStep = document.getElementById('catStep');
@@ -219,6 +227,9 @@
   var catError = document.getElementById('catError');
   var catBtn = document.getElementById('catBtn');
   var downloadBtn = document.getElementById('downloadBtn');
+  var downloadWarning = document.getElementById('downloadWarning');
+  var postDownloadMsg = document.getElementById('postDownloadMsg');
+  var verifySummary = document.getElementById('verifySummary');
   var dashboard = document.getElementById('dashboard');
   var ceilingInput = document.getElementById('ceiling');
   var cardFilterWrap = document.getElementById('cardFilterWrap');
@@ -273,6 +284,30 @@
     return d.toLocaleDateString('en-CA', { month:'short', year:'numeric' });
   }
 
+  function parseAmount(raw){
+    var cleaned = raw.trim().replace(/[$,]/g, '');
+    if (!/^-?\d+(\.\d+)?$/.test(cleaned)) return null;
+    return parseFloat(cleaned);
+  }
+
+  function csvEscape(v){
+    v = String(v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+  }
+
+  function logFileHash(text){
+    var bytes = new TextEncoder().encode(text);
+    console.log('A&N Ledger: loaded file is ' + bytes.length + ' bytes.');
+    if (!(window.crypto && window.crypto.subtle)){
+      console.log('A&N Ledger: SHA-256 hashing unavailable in this context.');
+      return;
+    }
+    window.crypto.subtle.digest('SHA-256', bytes).then(function(buf){
+      var hex = Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+      console.log('A&N Ledger: SHA-256 of loaded file: ' + hex);
+    }).catch(function(){ console.log('A&N Ledger: SHA-256 hashing failed.'); });
+  }
+
   document.getElementById('fileInput').addEventListener('change', function(e){
     var file = e.target.files[0];
     if (!file) return;
@@ -286,43 +321,62 @@
     catStep.style.display = 'none';
     dashboard.style.display = 'none';
     downloadBtn.style.display = 'none';
+    downloadWarning.style.display = 'none';
+    postDownloadMsg.style.display = 'none';
+    verifySummary.style.display = 'none';
     catError.textContent = '';
+    categorizedThisSession = 0;
 
+    logFileHash(text);
+
+    // Parse once. This table (and the dataRows/headerRow copied from it below)
+    // is the only in-memory representation of the file for the rest of the session.
     var table = parseCSV(text);
     if (!table.length){ loadError.textContent = 'The file is empty.'; return; }
     var rawHeaders = table[0];
     var norm = rawHeaders.map(function(h){ return h.trim().toLowerCase(); });
 
     var required = ['date','merchant','amount','category'];
-    var idx = {};
+    var cols = {};
     for (var i = 0; i < required.length; i++){
       var pos = norm.indexOf(required[i]);
       if (pos === -1){
         loadError.textContent = 'Missing required column: ' + required[i].charAt(0).toUpperCase() + required[i].slice(1);
         return;
       }
-      idx[required[i]] = pos;
+      cols[required[i]] = pos;
     }
-    var cardIdx = norm.indexOf('card');
+    cols.card = norm.indexOf('card');
 
-    rows = [];
-    for (var r = 1; r < table.length; r++){
-      var line = table[r];
-      if (!line.some(function(f){ return f.trim() !== ''; })) continue;
-      var dateStr = (line[idx.date] || '').trim();
-      var d = new Date(dateStr);
-      if (isNaN(d.getTime())){ continue; }
-      var amount = parseFloat((line[idx.amount] || '').replace(/[^0-9.\-]/g,''));
-      if (isNaN(amount)) amount = 0;
-      rows.push({
-        date: d,
-        month: monthKey(d),
-        merchant: (line[idx.merchant] || '').trim(),
-        amount: amount,
-        category: (line[idx.category] || '').trim(),
-        card: cardIdx === -1 ? 'Amex' : ((line[cardIdx] || '').trim() || 'Amex')
-      });
+    var body = table.slice(1).filter(function(line){
+      return line.some(function(f){ return f.trim() !== ''; });
+    });
+
+    // Validate every row before accepting any of it. A bad row anywhere
+    // stops the whole load rather than being skipped or coerced.
+    for (var r = 0; r < body.length; r++){
+      var line = body[r];
+      var csvLine = r + 2; // +1 for 0-index, +1 for the header row
+      var merchant = (line[cols.merchant] || '').trim();
+      var amount = parseAmount(line[cols.amount] || '');
+      if (amount === null){
+        loadError.textContent = 'Row ' + csvLine + ' (MERCHANT: ' + merchant + '): Amount is \'' + (line[cols.amount] || '') + '\', not a number.';
+        return;
+      }
+      var d = new Date((line[cols.date] || '').trim());
+      if (isNaN(d.getTime())){
+        loadError.textContent = 'Row ' + csvLine + ' (MERCHANT: ' + merchant + '): Date is \'' + (line[cols.date] || '') + '\', not a valid date.';
+        return;
+      }
     }
+
+    headerRow = rawHeaders;
+    dataRows = body;
+    originalSnapshot = body.map(function(line){ return line.slice(); });
+    originalRowCount = body.length;
+    idx = cols;
+
+    rebuildRows();
 
     var uncategorized = rows.filter(function(r){ return !r.category; });
     if (uncategorized.length){
@@ -334,6 +388,23 @@
     buildCardFilter();
     dashboard.style.display = 'block';
     renderDashboard();
+  }
+
+  // Rebuilds the derived `rows` array (used for rendering) from dataRows.
+  // dataRows itself is never touched except its Category cells.
+  function rebuildRows(){
+    rows = dataRows.map(function(line, r){
+      var d = new Date((line[idx.date] || '').trim());
+      return {
+        date: d,
+        month: monthKey(d),
+        merchant: (line[idx.merchant] || '').trim(),
+        amount: parseAmount(line[idx.amount] || ''),
+        category: (line[idx.category] || '').trim(),
+        card: idx.card === -1 ? 'Amex' : ((line[idx.card] || '').trim() || 'Amex'),
+        line: r
+      };
+    });
   }
 
   function buildCardFilter(){
@@ -355,7 +426,8 @@
     if (!key){ catError.textContent = 'Enter an OpenAI API key first.'; return; }
     localStorage.setItem(API_KEY_KEY, key);
     var targets = rows.filter(function(r){ return !r.category; });
-    if (!targets.length) return;
+    var expectedCount = targets.length;
+    if (!expectedCount) return;
     catError.textContent = '';
     catBtn.disabled = true;
     catBtn.textContent = 'Categorizing…';
@@ -387,19 +459,34 @@
       var content = data.choices[0].message.content;
       var parsed = JSON.parse(content);
       var list = Array.isArray(parsed) ? parsed : (parsed.categories || Object.values(parsed)[0]);
-      if (!Array.isArray(list) || list.length !== targets.length){
-        throw new Error('Model returned an unexpected shape.');
+      if (!Array.isArray(list)){
+        throw new Error('Model returned an unexpected shape. File not modified.');
       }
+      if (list.length !== expectedCount){
+        throw new Error('Expected ' + expectedCount + ' categories, got ' + list.length + '. File not modified.');
+      }
+
+      // Only the Category cell of each target row is written. Every other
+      // cell, and every row that already had a category, is untouched.
       targets.forEach(function(r, i){
         var cat = String(list[i] || '').trim();
-        r.category = CATEGORIES.indexOf(cat) !== -1 ? cat : 'UNCLEAR';
+        if (CATEGORIES.indexOf(cat) === -1){
+          console.warn('A&N Ledger: model returned unrecognized category \'' + cat + '\' for row ' + (r.line + 2) + ', treating as UNCLEAR.');
+          cat = 'UNCLEAR';
+        }
+        dataRows[r.line][idx.category] = cat;
       });
+      categorizedThisSession += targets.length;
+      rebuildRows();
+
       var remaining = rows.filter(function(r){ return !r.category; }).length;
       catNote.textContent = remaining
         ? remaining + ' row' + (remaining === 1 ? '' : 's') + ' still uncategorized.'
         : 'All rows categorized.';
       catBtn.textContent = remaining ? ('Categorize ' + remaining + ' rows') : 'Categorize rows';
       downloadBtn.style.display = 'inline-block';
+      downloadWarning.style.display = 'block';
+      showVerifySummary();
       buildCardFilter();
       renderDashboard();
     }).catch(function(err){
@@ -409,21 +496,55 @@
     });
   }
 
+  function showVerifySummary(){
+    var unchanged = originalRowCount - categorizedThisSession;
+    verifySummary.style.display = 'block';
+    verifySummary.textContent =
+      'Before you download:\n' +
+      'Total rows: ' + originalRowCount + '\n' +
+      'Rows with new categories: ' + categorizedThisSession + '\n' +
+      'Rows unchanged: ' + unchanged + '\n' +
+      'Rows that will be categorized: ' + categorizedThisSession;
+  }
+
+  // Everything except the Category cell must be byte-identical to what was
+  // read at load time. If anything drifted, refuse to write the file.
+  function validateBeforeDownload(){
+    if (dataRows.length !== originalRowCount){
+      return 'Row count changed (' + originalRowCount + ' → ' + dataRows.length + '). Refusing to download.';
+    }
+    for (var r = 0; r < dataRows.length; r++){
+      var current = dataRows[r], original = originalSnapshot[r];
+      if (current.length !== original.length){
+        return 'Row ' + (r + 2) + ': column count changed. Refusing to download.';
+      }
+      for (var c = 0; c < current.length; c++){
+        if (c === idx.category) continue;
+        if (current[c] !== original[c]){
+          return 'Row ' + (r + 2) + ': column ' + (headerRow[c] || c) + ' changed unexpectedly. Refusing to download.';
+        }
+      }
+      if (parseAmount(current[idx.amount]) === null){
+        return 'Row ' + (r + 2) + ': Amount is no longer a valid number. Refusing to download.';
+      }
+      if (isNaN(new Date((current[idx.date] || '').trim()).getTime())){
+        return 'Row ' + (r + 2) + ': Date is no longer valid. Refusing to download.';
+      }
+    }
+    return null;
+  }
+
   downloadBtn.addEventListener('click', function(){
-    var headers = ['Date','Merchant','Amount','Category','Card'];
-    var lines = [headers.join(',')];
-    rows.forEach(function(r){
-      var vals = [
-        r.date.toLocaleDateString('en-CA'),
-        r.merchant,
-        r.amount,
-        r.category,
-        r.card
-      ].map(function(v){
-        v = String(v);
-        return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
-      });
-      lines.push(vals.join(','));
+    var problem = validateBeforeDownload();
+    if (problem){
+      catError.textContent = problem;
+      return;
+    }
+    catError.textContent = '';
+
+    var lines = [headerRow.map(csvEscape).join(',')];
+    dataRows.forEach(function(line){
+      lines.push(line.map(csvEscape).join(','));
     });
     var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
     var url = URL.createObjectURL(blob);
@@ -431,6 +552,9 @@
     a.href = url; a.download = 'categorized.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    postDownloadMsg.style.display = 'block';
+    postDownloadMsg.textContent = 'Open the file you just downloaded. Verify the row count matches ' + originalRowCount + '. If it doesn\'t, do not replace your original.';
   });
 
   function filteredRows(){

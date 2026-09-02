@@ -1,38 +1,73 @@
 # A&N Ledger
 
-**Never commit real statement files.** Anything matching `*.csv`, `*.xlsx`,
-`*.xls`, `.env`, or `*.key` is gitignored (except `sample.csv`), and a
-pre-commit hook double-checks that. This repository is public.
+**Never commit real statement data or your OpenAI API key.** `.gitignore`
+covers `.env`, `amex-ledger.csv` (or whatever you name your running file),
+and `data/`, and a pre-commit hook double-checks that on every commit. This
+repository is public.
 
-Two independent static HTML tools. No server, no build step, no npm
-install, no API keys in source, no network calls except the one explicit
-OpenAI request described below. Everything runs by double-clicking the
-file in a browser.
+Everything in this folder — `index.html`, `rebuild.html`, and their
+supporting files — is scoped to A&N Ledger only. Nothing here depends on,
+or documents, anything else in the repository.
+
+Two independent static HTML tools, sharing a visual language and nothing
+else: no server, no build step, no npm install, no network calls except
+the one explicit OpenAI request described below. Everything runs by
+double-clicking the file in a browser.
 
 ## `index.html` — spending dashboard
 
-Load a CSV exported from the Amex statement sheet and see a monthly bar
-chart against an editable spend ceiling, a month-by-category breakdown,
-and which month(s) went over.
+Load a CSV of your transactions and see a monthly bar chart against an
+editable spend ceiling, a month-by-category breakdown, and which month(s)
+went over.
 
-**Exporting the CSV:** export the statement sheet to CSV with a header row
-containing (case-insensitive) `Date`, `Merchant`, `Amount`, `Category`,
-and optionally `Card`. `Amount` is positive for a charge, negative for a
-refund. `Category` should already be filled in with one of: Groceries,
+**Maintaining your running CSV:** keep one CSV file that you add to each
+month — export new transactions from the Amex statement sheet, append them
+to the end of the same file (don't create a new file each month), and sort
+by date. By the end of the year it covers every month in one file. Load
+that file into the tool each time; it re-reads the whole thing from
+scratch.
+
+**Required columns** (case-insensitive, matched by header name, not
+position): `Date`, `Merchant`, `Amount`, `Category`. `Amount` is positive
+for a charge, negative for a refund. `Category` is one of: Groceries,
 Dining, Fuel, Transport, Utilities, Phone/Internet, Subscriptions,
 Insurance, Medical, Household, Clothing, Travel, Entertainment,
-Fees/Interest, Payment, Other, UNCLEAR.
+Fees/Interest, Payment, Other, UNCLEAR. `Card` is optional — if it's
+missing every row is treated as `Amex`. If a required column is missing,
+the tool names it and refuses to load the file.
 
-**Categorizing new rows:** if some rows have a blank `Category`, the page
-shows how many and offers a "Categorize rows" button. Only when you click
-it does it send just the merchant name and amount for those rows to the
-OpenAI API (`gpt-4o-mini`). Nothing else in the file is sent, and rows
-that already have a category are never touched. The API key is entered in
-a password field and stored only in this browser's `localStorage` — it is
-never written to any file. After categorizing you can download the
-updated CSV to save back over your source file.
+**Categorizing new rows:** when you append fresh transactions they won't
+have a `Category` yet. The page shows how many and offers a "Categorize
+rows" button. Only when you click it does it send the merchant name and
+amount for just those rows to the OpenAI API (`gpt-4o-mini`) — nothing
+else in the file, and rows that already have a category are never
+touched. Enter your API key in the password field on the page; it's
+stored only in this browser's `localStorage` and is never written to a
+file. After categorizing, a verification summary and a "Download
+categorized CSV" button let you save the result back over your source
+file — keep a backup first.
 
 **Opening it:** double-click `index.html`.
+
+### Data integrity guardrails
+
+This tool touches financial data, so it is deliberately strict:
+
+- The file is parsed once, held in memory, and never re-read.
+- Every row's `Amount` must be numeric and every row's `Date` must be
+  valid before anything renders — the first bad row stops the load and
+  names the row, the column, and the bad value.
+- Categorizing never touches any column but `Category`, and never
+  overwrites a row that already has one. If the API returns a different
+  number of categories than were requested, or something outside the
+  fixed category list, nothing is written silently — you get an error or
+  a logged warning naming exactly what happened.
+- Before a download is generated, every row is re-checked against a
+  snapshot taken at load time: same row count, same columns, same amounts
+  and dates, only `Category` cells allowed to differ. Any mismatch
+  refuses the download rather than writing a corrupted file.
+- The browser console logs the loaded file's byte count and SHA-256 hash
+  on every load, as a reference if you ever need to prove what was read.
 
 ## `rebuild.html` — line of credit rebuild tracker
 
@@ -46,12 +81,11 @@ same way.
 git config core.hooksPath .githooks
 ```
 
-This makes `.githooks/pre-commit` run on every commit in this repo,
-refusing to commit any staged `.csv`, `.xlsx`, or `.env` file other than
-`sample.csv`.
+This makes `.githooks/pre-commit` run on every commit, refusing to commit
+any staged `.csv`, `.xlsx`, or `.env` file other than `sample.csv`.
 
 ## `sample.csv`
 
 Fake data for testing — several months, a refund, a Payment row, an
-UNCLEAR row, and one row with a blank Category so you can try the
+UNCLEAR row, and a few rows with a blank `Category` so you can try the
 categorize button without touching real data.

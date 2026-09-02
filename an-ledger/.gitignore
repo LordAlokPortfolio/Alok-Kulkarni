@@ -1,7 +1,4 @@
-*.csv
-*.xlsx
-*.xls
-data/
 .env
-*.key
+amex-ledger.csv
+data/
 !sample.csv
