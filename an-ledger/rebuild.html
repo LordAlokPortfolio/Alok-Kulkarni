@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Line of credit rebuild</title>
+<style>
+  :root{
+    --ink:#16232E;
+    --paper:#F2F4F3;
+    --rule:#C7D0CC;
+    --green:#2C6A4E;
+    --red:#A63A2B;
+    --dim:#5E6D6A;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:ui-sans-serif,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{
+    font-family:var(--serif);
+    color:var(--ink);
+    background:var(--paper);
+    max-width:520px;
+    margin:0 auto;
+    padding:26px 20px 40px;
+    line-height:1.45;
+  }
+  .kicker{
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.06em;
+    color:var(--dim);
+    margin:0 0 6px;
+  }
+  h1{
+    font-size:27px;
+    font-weight:400;
+    line-height:1.15;
+    margin:0 0 18px;
+    letter-spacing:-.01em;
+  }
+  .lede{
+    font-size:15px;
+    color:var(--dim);
+    margin:0 0 26px;
+    max-width:44ch;
+  }
+
+  /* step one */
+  .step{
+    border-top:2px solid var(--ink);
+    padding-top:14px;
+    margin-bottom:30px;
+  }
+  .step h2{
+    font-size:13px;
+    font-family:var(--sans);
+    font-weight:600;
+    margin:0 0 10px;
+  }
+  .clearbtn{
+    width:100%;
+    font-family:var(--sans);
+    font-size:15px;
+    font-weight:600;
+    color:var(--paper);
+    background:var(--red);
+    border:none;
+    border-radius:2px;
+    padding:15px;
+    cursor:pointer;
+  }
+  .clearbtn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+  .cleared{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-size:15px;
+  }
+  .cleared .amt{text-decoration:line-through;color:var(--dim)}
+  .cleared .tag{
+    font-family:var(--sans);
+    font-size:12px;
+    color:var(--green);
+    font-weight:600;
+  }
+  .undo{
+    font-family:var(--sans);
+    font-size:11px;
+    color:var(--dim);
+    background:none;
+    border:none;
+    padding:6px 0 0;
+    cursor:pointer;
+    text-decoration:underline;
+  }
+
+  /* hero counter */
+  .hero{margin-bottom:8px}
+  .big{
+    font-size:52px;
+    line-height:1;
+    letter-spacing:-.03em;
+    margin:0;
+    font-variant-numeric:tabular-nums;
+  }
+  .sub{
+    font-family:var(--sans);
+    font-size:12px;
+    color:var(--dim);
+    margin:6px 0 22px;
+  }
+
+  /* ledger */
+  .ledger{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+  .row{
+    display:grid;
+    grid-template-columns:34px 1fr auto;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    border-bottom:1px solid var(--rule);
+    padding:11px 2px;
+    font:inherit;
+    color:inherit;
+    cursor:pointer;
+  }
+  .row:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+  .n{
+    font-family:var(--sans);
+    font-size:11px;
+    color:var(--dim);
+    font-variant-numeric:tabular-nums;
+  }
+  .when{font-size:15px}
+  .val{
+    font-size:15px;
+    font-variant-numeric:tabular-nums;
+    color:var(--dim);
+  }
+  .row.done .when{color:var(--green)}
+  .row.done .val{color:var(--green);font-weight:600}
+  .row.done .n::after{content:' ✓';color:var(--green)}
+  .row.next{background:#E4EAE7}
+  .row.next .when::after{
+    content:' · next';
+    font-family:var(--sans);
+    font-size:11px;
+    color:var(--dim);
+  }
+
+  /* rules */
+  .rules{margin-top:34px;border-top:2px solid var(--ink);padding-top:14px}
+  .rules h2{font-size:13px;font-family:var(--sans);font-weight:600;margin:0 0 12px}
+  .rules ol{margin:0;padding-left:20px}
+  .rules li{font-size:14px;margin-bottom:9px;max-width:46ch}
+  .foot{
+    font-family:var(--sans);
+    font-size:11px;
+    color:var(--dim);
+    margin-top:26px;
+    padding-top:12px;
+    border-top:1px solid var(--rule);
+  }
+  .msg{
+    font-family:var(--sans);
+    font-size:12px;
+    color:var(--red);
+    margin-top:10px;
+  }
+  .toolfoot{
+    font-family:var(--sans);
+    font-size:11px;
+    margin-top:14px;
+  }
+  .toolfoot a{color:var(--dim)}
+  @media (prefers-reduced-motion:no-preference){
+    .row{transition:background .15s ease}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">Household plan · started September 2026</p>
+  <h1>The twenty thousand stays twenty thousand.</h1>
+  <p class="lede">Clear the line of credit from savings today, then put it back at $250 a month. No interest, no lender, no rush.</p>
+
+  <div class="step" id="step1">
+    <h2>Step one</h2>
+    <div id="step1body"></div>
+  </div>
+
+  <div class="hero">
+    <p class="big" id="restored">$0</p>
+    <p class="sub" id="heroSub">of $5,197.56 put back · 21 months to go</p>
+  </div>
+
+  <ul class="ledger" id="ledger"></ul>
+
+  <div class="rules">
+    <h2>Rules we agreed on</h2>
+    <ol>
+      <li>The line of credit is not a source of funds. If something needs paying, it comes from salary or it waits.</li>
+      <li>The $250 is a fixed transfer on payday, treated like rent. Not what is left over at month end.</li>
+      <li>A missed month gets added back at the end, not forgiven.</li>
+      <li>Amex stays on salary and is not folded into this.</li>
+    </ol>
+  </div>
+
+  <p class="foot">Down payment target: $20,000, earmarked for 2027. Tap any month to mark it paid.</p>
+  <p class="msg" id="msg"></p>
+  <p class="toolfoot"><a href="index.html">A&amp;N Ledger — spending dashboard</a></p>
+</div>
+
+<script>
+(function(){
+  var TOTAL = 5197.56, STEP = 250, KEY = 'loc-rebuild-v1';
+  var state = { cleared:null, paid:[] };
+  var msg = document.getElementById('msg');
+
+  var schedule = (function(){
+    var rows = [], left = TOTAL, d = new Date(2026, 9, 1); // Oct 2026
+    while (left > 0.005){
+      var amt = Math.min(STEP, left);
+      left = Math.round((left - amt) * 100) / 100;
+      rows.push({
+        label: d.toLocaleDateString('en-CA', { month:'long', year:'numeric' }),
+        amount: amt
+      });
+      d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    }
+    return rows;
+  })();
+
+  function money(n){
+    return '$' + n.toLocaleString('en-CA', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch(e){ msg.textContent = 'Could not save. Your marks may not stick next time.'; }
+  }
+
+  function load(){
+    try {
+      var v = localStorage.getItem(KEY);
+      if (v) state = JSON.parse(v);
+    } catch(e){ /* first run, nothing saved yet */ }
+    render();
+  }
+
+  function render(){
+    // step one
+    var box = document.getElementById('step1body');
+    box.innerHTML = '';
+    if (!state.cleared){
+      var b = document.createElement('button');
+      b.className = 'clearbtn';
+      b.textContent = 'Mark ' + money(TOTAL) + ' paid to the line of credit';
+      b.onclick = function(){
+        state.cleared = new Date().toLocaleDateString('en-CA', { month:'long', day:'numeric', year:'numeric' });
+        save(); render();
+      };
+      box.appendChild(b);
+    } else {
+      box.innerHTML =
+        '<div class="cleared"><span class="amt">' + money(TOTAL) + '</span>' +
+        '<span class="tag">Cleared ' + state.cleared + '</span></div>';
+      var u = document.createElement('button');
+      u.className = 'undo';
+      u.textContent = 'Undo';
+      u.onclick = function(){ state.cleared = null; save(); render(); };
+      box.appendChild(u);
+    }
+
+    // ledger
+    var list = document.getElementById('ledger');
+    list.innerHTML = '';
+    var nextIdx = -1;
+    for (var i = 0; i < schedule.length; i++){
+      if (state.paid.indexOf(i) === -1){ nextIdx = i; break; }
+    }
+
+    schedule.forEach(function(row, i){
+      var done = state.paid.indexOf(i) !== -1;
+      var li = document.createElement('li');
+      var btn = document.createElement('button');
+      btn.className = 'row' + (done ? ' done' : '') + (i === nextIdx && state.cleared ? ' next' : '');
+      btn.setAttribute('aria-pressed', done ? 'true' : 'false');
+      btn.innerHTML =
+        '<span class="n">' + (i + 1) + '</span>' +
+        '<span class="when">' + row.label + '</span>' +
+        '<span class="val">' + money(row.amount) + '</span>';
+      btn.onclick = function(){
+        var at = state.paid.indexOf(i);
+        if (at === -1) state.paid.push(i); else state.paid.splice(at, 1);
+        save(); render();
+      };
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+
+    // hero
+    var restored = state.paid.reduce(function(s, i){ return s + schedule[i].amount; }, 0);
+    restored = Math.round(restored * 100) / 100;
+    var monthsLeft = schedule.length - state.paid.length;
+    document.getElementById('restored').textContent = money(restored);
+    document.getElementById('heroSub').textContent = restored >= TOTAL - 0.005
+      ? 'Back to $20,000. Done.'
+      : 'of ' + money(TOTAL) + ' put back · ' + monthsLeft + ' month' + (monthsLeft === 1 ? '' : 's') + ' to go';
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

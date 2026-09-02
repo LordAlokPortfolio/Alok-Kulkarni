@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A&amp;N Ledger</title>
+<style>
+  :root{
+    --ink:#16232E;
+    --paper:#F2F4F3;
+    --rule:#C7D0CC;
+    --green:#2C6A4E;
+    --red:#A63A2B;
+    --dim:#5E6D6A;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:ui-sans-serif,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{
+    font-family:var(--serif);
+    color:var(--ink);
+    background:var(--paper);
+    max-width:820px;
+    margin:0 auto;
+    padding:26px 20px 40px;
+    line-height:1.45;
+  }
+  .kicker{
+    font-family:var(--sans);
+    font-size:11px;
+    letter-spacing:.06em;
+    color:var(--dim);
+    margin:0 0 6px;
+  }
+  h1{
+    font-size:27px;
+    font-weight:400;
+    line-height:1.15;
+    margin:0 0 18px;
+    letter-spacing:-.01em;
+  }
+  .lede{
+    font-size:15px;
+    color:var(--dim);
+    margin:0 0 26px;
+    max-width:60ch;
+  }
+  .step{
+    border-top:2px solid var(--ink);
+    padding-top:14px;
+    margin-bottom:24px;
+  }
+  .step h2{
+    font-size:13px;
+    font-family:var(--sans);
+    font-weight:600;
+    margin:0 0 10px;
+  }
+  button{
+    font-family:var(--sans);
+    font-size:14px;
+    font-weight:600;
+    color:var(--paper);
+    background:var(--ink);
+    border:none;
+    border-radius:2px;
+    padding:11px 16px;
+    cursor:pointer;
+  }
+  button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+  button.warn{background:var(--red)}
+  input[type=file]{font-family:var(--sans);font-size:13px}
+  input[type=number],input[type=password]{
+    font-family:var(--sans);
+    font-size:14px;
+    padding:8px 10px;
+    border:1px solid var(--rule);
+    border-radius:2px;
+    background:#fff;
+    color:var(--ink);
+  }
+  label{font-family:var(--sans);font-size:12px;color:var(--dim);display:block;margin-bottom:4px}
+  .row-flex{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .msg{
+    font-family:var(--sans);
+    font-size:13px;
+    color:var(--red);
+    margin:10px 0 0;
+  }
+  .note{
+    font-family:var(--sans);
+    font-size:12px;
+    color:var(--dim);
+    margin:8px 0 0;
+  }
+  .warnbox{
+    font-family:var(--sans);
+    font-size:12px;
+    color:var(--red);
+    margin:10px 0 0;
+    max-width:60ch;
+  }
+  select{
+    font-family:var(--sans);
+    font-size:14px;
+    padding:8px 10px;
+    border:1px solid var(--rule);
+    border-radius:2px;
+    background:#fff;
+    color:var(--ink);
+  }
+  table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:12px;margin-top:8px}
+  th,td{border-bottom:1px solid var(--rule);padding:7px 8px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{color:var(--dim);font-weight:600;border-bottom:2px solid var(--ink)}
+  tbody tr.over{background:#F5E7E3}
+  tfoot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none}
+  .tablewrap{overflow-x:auto}
+  .neg{color:var(--dim)}
+  .over-amt{color:var(--red);font-weight:700}
+  .worst{
+    font-family:var(--sans);
+    font-size:13px;
+    margin-top:14px;
+    padding:12px 14px;
+    background:#F5E7E3;
+    border-radius:2px;
+    max-width:60ch;
+  }
+  .worst strong{display:block;font-size:14px;margin-bottom:6px}
+  .foot{
+    font-family:var(--sans);
+    font-size:11px;
+    color:var(--dim);
+    margin-top:26px;
+    padding-top:12px;
+    border-top:1px solid var(--rule);
+  }
+  .foot a{color:var(--dim)}
+  #dashboard{display:none}
+  svg text{font-family:var(--sans)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">A&amp;N Ledger</p>
+  <h1>Spending dashboard</h1>
+  <p class="lede">Pick a CSV exported from the Amex statement sheet. Nothing leaves this machine except the merchant/amount pairs you explicitly send to OpenAI to categorize.</p>
+
+  <div class="step">
+    <h2>Load statement</h2>
+    <div class="row-flex">
+      <input type="file" id="fileInput" accept=".csv">
+    </div>
+    <p class="msg" id="loadError"></p>
+  </div>
+
+  <div class="step" id="catStep" style="display:none">
+    <h2>Categorize</h2>
+    <p class="note" id="catNote"></p>
+    <div class="row-flex" style="margin-top:8px">
+      <div>
+        <label for="apiKey">OpenAI API key (stored only in this browser's localStorage)</label>
+        <input type="password" id="apiKey" placeholder="sk-...">
+      </div>
+      <button id="catBtn">Categorize rows</button>
+    </div>
+    <p class="msg" id="catError"></p>
+    <div class="row-flex" style="margin-top:10px">
+      <button id="downloadBtn" style="display:none">Download categorized CSV</button>
+    </div>
+  </div>
+
+  <div id="dashboard">
+    <div class="step">
+      <h2>Ceiling</h2>
+      <div class="row-flex">
+        <div>
+          <label for="ceiling">Monthly spend ceiling (CAD)</label>
+          <input type="number" id="ceiling" step="0.01">
+        </div>
+        <div id="cardFilterWrap" style="display:none">
+          <label for="cardFilter">Card</label>
+          <select id="cardFilter"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <h2>Monthly spend</h2>
+      <div id="chart"></div>
+      <div id="unclearWarnings"></div>
+    </div>
+
+    <div class="step">
+      <h2>Month by category</h2>
+      <div class="tablewrap" id="tableWrap"></div>
+      <div id="worstMonth"></div>
+    </div>
+  </div>
+
+  <p class="foot"><a href="rebuild.html">Line of credit rebuild tracker</a></p>
+</div>
+
+<script>
+(function(){
+  var CATEGORIES = ['Groceries','Dining','Fuel','Transport','Utilities','Phone/Internet','Subscriptions','Insurance','Medical','Household','Clothing','Travel','Entertainment','Fees/Interest','Payment','Other','UNCLEAR'];
+  var SPEND_CATEGORIES = CATEGORIES.filter(function(c){ return c !== 'Payment'; });
+  var CEIL_KEY = 'anledger-ceiling';
+  var API_KEY_KEY = 'anledger-openai-key';
+
+  var rows = []; // {date, month, merchant, amount, category, card}
+  var headerMap = null;
+
+  var loadError = document.getElementById('loadError');
+  var catStep = document.getElementById('catStep');
+  var catNote = document.getElementById('catNote');
+  var catError = document.getElementById('catError');
+  var catBtn = document.getElementById('catBtn');
+  var downloadBtn = document.getElementById('downloadBtn');
+  var dashboard = document.getElementById('dashboard');
+  var ceilingInput = document.getElementById('ceiling');
+  var cardFilterWrap = document.getElementById('cardFilterWrap');
+  var cardFilter = document.getElementById('cardFilter');
+  var apiKeyInput = document.getElementById('apiKey');
+
+  apiKeyInput.value = localStorage.getItem(API_KEY_KEY) || '';
+  ceilingInput.value = localStorage.getItem(CEIL_KEY) || '3283.84';
+  apiKeyInput.addEventListener('change', function(){
+    localStorage.setItem(API_KEY_KEY, apiKeyInput.value);
+  });
+  ceilingInput.addEventListener('input', function(){
+    localStorage.setItem(CEIL_KEY, ceilingInput.value);
+    renderDashboard();
+  });
+  cardFilter.addEventListener('change', renderDashboard);
+
+  function parseCSV(text){
+    var rows = [], row = [], field = '', inQuotes = false;
+    for (var i = 0; i < text.length; i++){
+      var c = text[i];
+      if (inQuotes){
+        if (c === '"'){
+          if (text[i+1] === '"'){ field += '"'; i++; }
+          else inQuotes = false;
+        } else field += c;
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ','){ row.push(field); field = ''; }
+        else if (c === '\n' || c === '\r'){
+          if (c === '\r' && text[i+1] === '\n') i++;
+          row.push(field); field = '';
+          rows.push(row); row = [];
+        } else field += c;
+      }
+    }
+    if (field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(function(r){ return !(r.length === 1 && r[0] === ''); });
+  }
+
+  function money(n){
+    var sign = n < 0 ? '-' : '';
+    return sign + '$' + Math.abs(n).toLocaleString('en-CA', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  function monthKey(d){
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+  function monthLabel(key){
+    var parts = key.split('-');
+    var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1);
+    return d.toLocaleDateString('en-CA', { month:'short', year:'numeric' });
+  }
+
+  document.getElementById('fileInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){ handleCSV(reader.result); };
+    reader.readAsText(file);
+  });
+
+  function handleCSV(text){
+    loadError.textContent = '';
+    catStep.style.display = 'none';
+    dashboard.style.display = 'none';
+    downloadBtn.style.display = 'none';
+    catError.textContent = '';
+
+    var table = parseCSV(text);
+    if (!table.length){ loadError.textContent = 'The file is empty.'; return; }
+    var rawHeaders = table[0];
+    var norm = rawHeaders.map(function(h){ return h.trim().toLowerCase(); });
+
+    var required = ['date','merchant','amount','category'];
+    var idx = {};
+    for (var i = 0; i < required.length; i++){
+      var pos = norm.indexOf(required[i]);
+      if (pos === -1){
+        loadError.textContent = 'Missing required column: ' + required[i].charAt(0).toUpperCase() + required[i].slice(1);
+        return;
+      }
+      idx[required[i]] = pos;
+    }
+    var cardIdx = norm.indexOf('card');
+
+    rows = [];
+    for (var r = 1; r < table.length; r++){
+      var line = table[r];
+      if (!line.some(function(f){ return f.trim() !== ''; })) continue;
+      var dateStr = (line[idx.date] || '').trim();
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())){ continue; }
+      var amount = parseFloat((line[idx.amount] || '').replace(/[^0-9.\-]/g,''));
+      if (isNaN(amount)) amount = 0;
+      rows.push({
+        date: d,
+        month: monthKey(d),
+        merchant: (line[idx.merchant] || '').trim(),
+        amount: amount,
+        category: (line[idx.category] || '').trim(),
+        card: cardIdx === -1 ? 'Amex' : ((line[cardIdx] || '').trim() || 'Amex')
+      });
+    }
+
+    var uncategorized = rows.filter(function(r){ return !r.category; });
+    if (uncategorized.length){
+      catStep.style.display = 'block';
+      catNote.textContent = uncategorized.length + ' row' + (uncategorized.length === 1 ? '' : 's') + ' uncategorized.';
+      catBtn.textContent = 'Categorize ' + uncategorized.length + ' rows';
+    }
+
+    buildCardFilter();
+    dashboard.style.display = 'block';
+    renderDashboard();
+  }
+
+  function buildCardFilter(){
+    var cards = Array.from(new Set(rows.map(function(r){ return r.card; })));
+    if (cards.length > 1){
+      cardFilterWrap.style.display = 'block';
+      cardFilter.innerHTML = '<option value="">All cards</option>' +
+        cards.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    } else {
+      cardFilterWrap.style.display = 'none';
+      cardFilter.innerHTML = '';
+    }
+  }
+
+  catBtn.addEventListener('click', function(){ categorizeRows(); });
+
+  function categorizeRows(){
+    var key = apiKeyInput.value.trim();
+    if (!key){ catError.textContent = 'Enter an OpenAI API key first.'; return; }
+    localStorage.setItem(API_KEY_KEY, key);
+    var targets = rows.filter(function(r){ return !r.category; });
+    if (!targets.length) return;
+    catError.textContent = '';
+    catBtn.disabled = true;
+    catBtn.textContent = 'Categorizing…';
+
+    var payload = targets.map(function(r){ return { merchant: r.merchant, amount: r.amount }; });
+    var system = 'You categorize personal credit card transactions into exactly one of these categories: ' +
+      CATEGORIES.join(', ') + '. If you are not confident, answer UNCLEAR. Never invent a category outside this list.';
+    var user = 'Return a JSON array of category strings, one per transaction, in the same order as this input:\n' +
+      JSON.stringify(payload);
+
+    fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    }).then(function(resp){
+      if (!resp.ok){ return resp.text().then(function(t){ throw new Error('API error ' + resp.status + ': ' + t); }); }
+      return resp.json();
+    }).then(function(data){
+      var content = data.choices[0].message.content;
+      var parsed = JSON.parse(content);
+      var list = Array.isArray(parsed) ? parsed : (parsed.categories || Object.values(parsed)[0]);
+      if (!Array.isArray(list) || list.length !== targets.length){
+        throw new Error('Model returned an unexpected shape.');
+      }
+      targets.forEach(function(r, i){
+        var cat = String(list[i] || '').trim();
+        r.category = CATEGORIES.indexOf(cat) !== -1 ? cat : 'UNCLEAR';
+      });
+      var remaining = rows.filter(function(r){ return !r.category; }).length;
+      catNote.textContent = remaining
+        ? remaining + ' row' + (remaining === 1 ? '' : 's') + ' still uncategorized.'
+        : 'All rows categorized.';
+      catBtn.textContent = remaining ? ('Categorize ' + remaining + ' rows') : 'Categorize rows';
+      downloadBtn.style.display = 'inline-block';
+      buildCardFilter();
+      renderDashboard();
+    }).catch(function(err){
+      catError.textContent = err.message;
+    }).finally(function(){
+      catBtn.disabled = false;
+    });
+  }
+
+  downloadBtn.addEventListener('click', function(){
+    var headers = ['Date','Merchant','Amount','Category','Card'];
+    var lines = [headers.join(',')];
+    rows.forEach(function(r){
+      var vals = [
+        r.date.toLocaleDateString('en-CA'),
+        r.merchant,
+        r.amount,
+        r.category,
+        r.card
+      ].map(function(v){
+        v = String(v);
+        return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+      });
+      lines.push(vals.join(','));
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'categorized.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  function filteredRows(){
+    var card = cardFilter.value;
+    return rows.filter(function(r){ return !card || r.card === card; });
+  }
+
+  function renderDashboard(){
+    if (!rows.length) return;
+    var spend = filteredRows().filter(function(r){ return r.category !== 'Payment'; });
+
+    var months = Array.from(new Set(spend.map(function(r){ return r.month; }))).sort();
+    var byMonth = {};
+    months.forEach(function(m){ byMonth[m] = { total: 0, cats: {}, unclear: 0 }; });
+    spend.forEach(function(r){
+      var m = byMonth[r.month];
+      m.total += r.amount;
+      m.cats[r.category] = (m.cats[r.category] || 0) + r.amount;
+      if (r.category === 'UNCLEAR') m.unclear += r.amount;
+    });
+
+    var ceiling = parseFloat(ceilingInput.value) || 0;
+    renderChart(months, byMonth, ceiling);
+    renderUnclearWarnings(months, byMonth);
+    renderTable(months, byMonth, ceiling);
+    renderWorstMonth(months, byMonth, ceiling);
+  }
+
+  function renderChart(months, byMonth, ceiling){
+    var chart = document.getElementById('chart');
+    if (!months.length){ chart.innerHTML = ''; return; }
+    var w = 820, h = 260, padL = 60, padB = 30, padT = 16, padR = 16;
+    var innerW = w - padL - padR, innerH = h - padT - padB;
+    var barGap = 10;
+    var barW = Math.max(8, innerW / months.length - barGap);
+
+    var maxVal = Math.max(ceiling, 0.01, Math.max.apply(null, months.map(function(m){ return byMonth[m].total; })));
+    var minVal = Math.min(0, Math.min.apply(null, months.map(function(m){ return byMonth[m].total; })));
+    var range = maxVal - minVal;
+    var zeroY = padT + innerH * (maxVal / range);
+
+    function yFor(v){ return padT + innerH * ((maxVal - v) / range); }
+
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto" role="img" aria-label="Monthly spend chart">';
+    svg += '<line x1="' + padL + '" y1="' + zeroY + '" x2="' + (w-padR) + '" y2="' + zeroY + '" stroke="var(--rule)" stroke-width="1"/>';
+    var ceilY = yFor(ceiling);
+    svg += '<line x1="' + padL + '" y1="' + ceilY + '" x2="' + (w-padR) + '" y2="' + ceilY + '" stroke="var(--red)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    svg += '<text x="' + (w-padR) + '" y="' + (ceilY - 4) + '" font-size="10" fill="var(--red)" text-anchor="end">ceiling ' + money(ceiling) + '</text>';
+
+    months.forEach(function(m, i){
+      var val = byMonth[m].total;
+      var x = padL + i * (barW + barGap);
+      var yTop = yFor(Math.max(val, 0));
+      var yBot = yFor(Math.min(val, 0));
+      var barH = Math.max(1, yBot - yTop);
+      var over = val > ceiling;
+      var fill = val < 0 ? 'var(--dim)' : (over ? 'var(--red)' : 'var(--green)');
+      svg += '<rect x="' + x + '" y="' + yTop + '" width="' + barW + '" height="' + barH + '" fill="' + fill + '"/>';
+      svg += '<text x="' + (x + barW/2) + '" y="' + (h - padB + 14) + '" font-size="10" fill="var(--dim)" text-anchor="middle">' + monthLabel(m) + '</text>';
+      var labelY = val >= 0 ? (yTop - 4) : (yBot + 12);
+      svg += '<text x="' + (x + barW/2) + '" y="' + labelY + '" font-size="10" fill="var(--ink)" text-anchor="middle">' + money(val) + '</text>';
+    });
+    svg += '</svg>';
+    chart.innerHTML = svg;
+  }
+
+  function renderUnclearWarnings(months, byMonth){
+    var box = document.getElementById('unclearWarnings');
+    var warnings = [];
+    months.forEach(function(m){
+      var d = byMonth[m];
+      if (d.total > 0 && d.unclear / d.total > 0.10){
+        warnings.push(monthLabel(m) + ': ' + Math.round(d.unclear / d.total * 100) + '% of spend is UNCLEAR — this month\'s figures can\'t be trusted yet.');
+      }
+    });
+    box.innerHTML = warnings.length
+      ? '<p class="warnbox">' + warnings.join('<br>') + '</p>'
+      : '';
+  }
+
+  function renderTable(months, byMonth, ceiling){
+    var wrap = document.getElementById('tableWrap');
+    if (!months.length){ wrap.innerHTML = ''; return; }
+    var catTotals = {};
+    SPEND_CATEGORIES.forEach(function(c){ catTotals[c] = 0; });
+
+    var html = '<table><thead><tr><th>Month</th>';
+    SPEND_CATEGORIES.forEach(function(c){ html += '<th>' + c + '</th>'; });
+    html += '<th>Total</th></tr></thead><tbody>';
+
+    months.forEach(function(m){
+      var d = byMonth[m];
+      var over = d.total > ceiling;
+      html += '<tr class="' + (over ? 'over' : '') + '"><td>' + monthLabel(m) + '</td>';
+      SPEND_CATEGORIES.forEach(function(c){
+        var v = d.cats[c] || 0;
+        catTotals[c] += v;
+        html += '<td class="' + (v < 0 ? 'neg' : '') + '">' + (v ? money(v) : '—') + '</td>';
+      });
+      html += '<td>' + money(d.total) + (over ? ' <span class="over-amt">(+' + money(d.total - ceiling) + ')</span>' : '') + '</td></tr>';
+    });
+
+    var grand = months.reduce(function(s, m){ return s + byMonth[m].total; }, 0);
+    html += '</tbody><tfoot><tr><td>Total</td>';
+    SPEND_CATEGORIES.forEach(function(c){ html += '<td>' + (catTotals[c] ? money(catTotals[c]) : '—') + '</td>'; });
+    html += '<td>' + money(grand) + '</td></tr></tfoot></table>';
+    wrap.innerHTML = html;
+  }
+
+  function renderWorstMonth(months, byMonth, ceiling){
+    var box = document.getElementById('worstMonth');
+    var over = months.filter(function(m){ return byMonth[m].total > ceiling; });
+    if (!over.length){ box.innerHTML = ''; return; }
+    var worst = over.reduce(function(a, b){ return byMonth[b].total > byMonth[a].total ? b : a; });
+    var cats = byMonth[worst].cats;
+    var top3 = Object.keys(cats)
+      .sort(function(a, b){ return cats[b] - cats[a]; })
+      .slice(0, 3);
+    box.innerHTML = '<div class="worst"><strong>Worst month over ceiling: ' + monthLabel(worst) + ' (+' + money(byMonth[worst].total - ceiling) + ')</strong>' +
+      top3.map(function(c){ return c + ': ' + money(cats[c]); }).join(' · ') + '</div>';
+  }
+})();
+</script>
+</body>
+</html>

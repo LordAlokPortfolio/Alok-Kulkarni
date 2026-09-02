@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refuses the commit if any staged file other than sample.csv looks like
+# statement data or a secret (.csv, .xlsx, .env).
+blocked=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(csv|xlsx|env)$' | grep -v -E '(^|/)sample\.csv$')
+
+if [ -n "$blocked" ]; then
+  echo "pre-commit: refusing to commit statement/secret-like files:"
+  echo "$blocked"
+  echo "If this is really safe to commit, rename it or update .githooks/pre-commit."
+  exit 1
+fi
