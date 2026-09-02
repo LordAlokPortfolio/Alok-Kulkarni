@@ -38,27 +38,30 @@ whatever is in the CSV, not an analysis engine.
 
 ## Getting started from a real Amex export
 
-Amex's own CSV export does **not** already match what the dashboard
-expects — it needs a small one-time fix before the first load:
+Amex's own CSV export already has `Date`, `Amount`, and `Merchant`
+columns with those exact names — no renaming needed there. It also comes
+with columns the dashboard ignores (`Description`, `Address`, `City /
+Province`, `Postal Code`, `Country`, `Reference`) and is missing the one
+column the dashboard actually requires: `Category`. One column needs
+adding before the first load:
 
 1. Download the repository (or just the `an-ledger/` folder) and open
    `an-ledger/index.html` by double-clicking it.
 2. Export transactions from the Amex site as CSV.
-3. Open that CSV in a spreadsheet and rename its columns to exactly
-   `Date`, `Merchant`, `Amount`, `Category` (Amex typically calls these
-   something like Date, Description, Amount — the names have to match,
-   the tool reads by header name). Add a `Card` column too if more than
-   one card's transactions are being tracked together; otherwise skip it.
-4. Add a `Category` column if there isn't one. It can be left **entirely
-   blank** — the dashboard will still load the file, and the "Categorize
-   rows" button will offer to fill every blank row in one pass using
-   OpenAI's API (a personal API key is required, and each categorize
-   call costs a small, per-request amount on that account). Categories
-   can also just be typed in by hand instead, using one of: Groceries,
-   Dining, Fuel, Transport, Utilities, Phone/Internet, Subscriptions,
-   Insurance, Medical, Household, Clothing, Travel, Entertainment,
-   Fees/Interest, Payment, Other, UNCLEAR — no OpenAI key needed if so.
-5. Save that CSV and load it into `index.html` via the file picker.
+3. Open that CSV in a spreadsheet and add a `Category` column. It can be
+   left **entirely blank** — the dashboard will still load the file, and
+   the "Categorize rows" button will offer to fill every blank row in one
+   pass using OpenAI's API (a personal API key is required, and each
+   categorize call costs a small, per-request amount on that account).
+   Categories can also just be typed in by hand instead, using one of:
+   Groceries, Dining, Fuel, Transport, Utilities, Phone/Internet,
+   Subscriptions, Insurance, Medical, Household, Clothing, Travel,
+   Entertainment, Fees/Interest, Payment, Other, UNCLEAR — no OpenAI key
+   needed if so. The extra Amex columns (Description, Address, etc.) can
+   stay; the dashboard just ignores anything it doesn't need. Add a
+   `Card` column too if more than one card's transactions are being
+   tracked together in the same file; otherwise skip it.
+4. Save that CSV and load it into `index.html` via the file picker.
 
 From then on, the same file is reused: new transactions get appended to
 the bottom each month (not a new file each time) and reloaded.
