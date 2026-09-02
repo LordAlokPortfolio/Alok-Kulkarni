@@ -1,20 +1,20 @@
 Date,Merchant,Amount,Category,Card
-2026-01-05,Loblaws,142.37,Groceries,Amex
-2026-01-08,Shell,58.20,Fuel,Amex
-2026-01-12,Netflix,16.99,Subscriptions,Amex
-2026-01-15,Payment Thank You,-800.00,Payment,Amex
-2026-01-22,Uber,23.50,Transport,Amex
-2026-02-02,Loblaws,168.90,Groceries,Amex
-2026-02-06,Tim Hortons,7.85,Dining,Amex
-2026-02-10,Rogers,95.00,Phone/Internet,Amex
-2026-02-14,Shoppers Drug Mart,34.60,Medical,Amex
-2026-02-18,Return - Sport Chek,-45.00,Clothing,Amex
-2026-02-25,Payment Thank You,-950.00,Payment,Amex
-2026-03-03,Costco,310.44,Groceries,Amex
-2026-03-09,Enterprise Rent-A-Car,212.00,Travel,Amex
-2026-03-14,Unknown Merchant 4471,64.10,UNCLEAR,Amex
-2026-03-20,Cineplex,28.75,Entertainment,Amex
-2026-03-27,Best Buy,189.99,,Amex
-2026-04-02,Loblaws,155.20,Groceries,Amex
-2026-04-06,Petro-Canada,61.40,,Amex
-2026-04-11,Unknown Merchant 7723,42.00,,Amex
+2026-02-05,Loblaws,142.37,Groceries,Amex
+2026-02-08,Shell,58.20,Fuel,Amex
+2026-02-12,Netflix,16.99,Subscriptions,Amex
+2026-02-15,Payment Thank You,-800.00,Payment,Amex
+2026-02-22,Uber,23.50,Transport,Amex
+2026-04-02,Loblaws,168.90,Groceries,Amex
+2026-04-06,Tim Hortons,7.85,Dining,Amex
+2026-04-10,Rogers,95.00,Phone/Internet,Amex
+2026-04-14,Shoppers Drug Mart,34.60,Medical,Amex
+2026-04-18,Return - Sport Chek,-45.00,Clothing,Amex
+2026-04-25,Payment Thank You,-950.00,Payment,Amex
+2026-06-03,Costco,310.44,Groceries,Amex
+2026-06-09,Enterprise Rent-A-Car,212.00,Travel,Amex
+2026-06-14,Unknown Merchant 4471,64.10,UNCLEAR,Amex
+2026-06-20,Cineplex,28.75,Entertainment,Amex
+2026-06-27,Best Buy,189.99,,Amex
+2026-08-02,Loblaws,155.20,Groceries,Amex
+2026-08-06,Petro-Canada,61.40,,Amex
+2026-08-11,Unknown Merchant 7723,42.00,,Amex
