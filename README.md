@@ -15,6 +15,27 @@ else: no server, no build step, no npm install, no network calls except
 the one explicit OpenAI request described below. Both run by
 double-clicking the file in a browser — no account, no install.
 
+## What the dashboard gives you
+
+- Whether a given month went over a spending ceiling, and by how much.
+- For the worst over-ceiling month, its top 3 categories by amount, so
+  the cause is visible without reading the whole table.
+- A full month-by-category breakdown with row and column totals.
+- Correct handling of refunds (they reduce the total, a month can go
+  negative) and card payments (excluded from spend entirely, so paying
+  the bill is never counted as spending).
+- A warning when a month's `UNCLEAR` category is over 10% of its total,
+  so bad categorization doesn't quietly distort the numbers.
+- Optional AI-assisted categorizing for new, blank-category rows.
+- A per-`Card` filter, if more than one card is tracked in the same file.
+
+**What it does not give you:** it cannot split spending *by person* —
+only by `Card`. If two people share one physical card, there is no way
+to see who spent what; it only answers "did we go over, and on what,"
+not "who spent it." It also does no forecasting, no recurring-charge
+detection, and no year-over-year comparison — it's a read-only mirror of
+whatever is in the CSV, not an analysis engine.
+
 ## Getting started from a real Amex export
 
 Amex's own CSV export does **not** already match what the dashboard
