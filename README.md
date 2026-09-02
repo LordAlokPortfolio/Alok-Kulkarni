@@ -1,20 +1,21 @@
 # A&N Ledger
 
-**Never commit real statement data or your OpenAI API key.** `.gitignore`
-covers `.env`, `amex-ledger.csv` (or whatever you name your running file),
-and `data/`, and a pre-commit hook double-checks that on every commit. This
-repository is public.
+**Never commit real statement data or your OpenAI API key.**
+`an-ledger/.gitignore` covers `.env`, `amex-ledger.csv` (or whatever you
+name your running file), and `data/`, and a pre-commit hook double-checks
+that on every commit. This repository is public.
 
-Everything in this folder — `index.html`, `rebuild.html`, and their
-supporting files — is scoped to A&N Ledger only. Nothing here depends on,
-or documents, anything else in the repository.
+Everything for A&N Ledger — `index.html`, `rebuild.html`, and their
+supporting files — lives in the `an-ledger/` folder. This README documents
+only that folder; nothing here depends on or describes anything else in
+the repository.
 
 Two independent static HTML tools, sharing a visual language and nothing
 else: no server, no build step, no npm install, no network calls except
 the one explicit OpenAI request described below. Everything runs by
 double-clicking the file in a browser.
 
-## `index.html` — spending dashboard
+## `an-ledger/index.html` — spending dashboard
 
 Load a CSV of your transactions and see a monthly bar chart against an
 editable spend ceiling, a month-by-category breakdown, and which month(s)
@@ -47,7 +48,7 @@ file. After categorizing, a verification summary and a "Download
 categorized CSV" button let you save the result back over your source
 file — keep a backup first.
 
-**Opening it:** double-click `index.html`.
+**Opening it:** double-click `an-ledger/index.html`.
 
 ### Data integrity guardrails
 
@@ -69,7 +70,7 @@ This tool touches financial data, so it is deliberately strict:
 - The browser console logs the loaded file's byte count and SHA-256 hash
   on every load, as a reference if you ever need to prove what was read.
 
-## `rebuild.html` — line of credit rebuild tracker
+## `an-ledger/rebuild.html` — line of credit rebuild tracker
 
 A standalone household tracker, unrelated to the dashboard beyond shared
 styling. State is saved to this browser's `localStorage`. Open it the
@@ -78,13 +79,14 @@ same way.
 ## Enabling the commit-safety hook
 
 ```
-git config core.hooksPath .githooks
+git config core.hooksPath an-ledger/.githooks
 ```
 
-This makes `.githooks/pre-commit` run on every commit, refusing to commit
-any staged `.csv`, `.xlsx`, or `.env` file other than `sample.csv`.
+This makes `an-ledger/.githooks/pre-commit` run on every commit, refusing
+to commit any staged `.csv`, `.xlsx`, or `.env` file other than
+`sample.csv`.
 
-## `sample.csv`
+## `an-ledger/sample.csv`
 
 Fake data for testing — several months, a refund, a Payment row, an
 UNCLEAR row, and a few rows with a blank `Category` so you can try the
