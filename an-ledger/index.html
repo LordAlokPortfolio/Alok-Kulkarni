@@ -141,17 +141,18 @@
   #dashboard{display:none}
   svg text{font-family:var(--sans)}
 </style>
+<script src="vendor/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="wrap">
   <p class="kicker">A&amp;N Ledger</p>
   <h1>Spending dashboard</h1>
-  <p class="lede">Pick a CSV exported from the Amex statement sheet. Nothing leaves this machine except the merchant/amount pairs you explicitly send to OpenAI to categorize.</p>
+  <p class="lede">Pick a raw Amex export (.csv or .xlsx). Any metadata rows above the real table are skipped automatically. Nothing leaves this machine except the merchant/amount pairs you explicitly send to OpenAI to categorize.</p>
 
   <div class="step">
     <h2>Load statement</h2>
     <div class="row-flex">
-      <input type="file" id="fileInput" accept=".csv">
+      <input type="file" id="fileInput" accept=".csv,.xlsx">
     </div>
     <p class="msg" id="loadError"></p>
   </div>
@@ -296,7 +297,10 @@
   }
 
   function logFileHash(text){
-    var bytes = new TextEncoder().encode(text);
+    logBytesHash(new TextEncoder().encode(text));
+  }
+
+  function logBytesHash(bytes){
     console.log('A&N Ledger: loaded file is ' + bytes.length + ' bytes.');
     if (!(window.crypto && window.crypto.subtle)){
       console.log('A&N Ledger: SHA-256 hashing unavailable in this context.');
@@ -308,15 +312,55 @@
     }).catch(function(){ console.log('A&N Ledger: SHA-256 hashing failed.'); });
   }
 
+  var HEADER_SCAN_LIMIT = 30; // how many leading rows to search for the real header
+
   document.getElementById('fileInput').addEventListener('change', function(e){
     var file = e.target.files[0];
     if (!file) return;
+    var isXlsx = /\.xlsx$/i.test(file.name);
     var reader = new FileReader();
-    reader.onload = function(){ handleCSV(reader.result); };
-    reader.readAsText(file);
+    reader.onload = function(){
+      if (isXlsx){
+        handleXLSX(reader.result);
+      } else {
+        logFileHash(reader.result);
+        handleTable(parseCSV(reader.result));
+      }
+    };
+    if (isXlsx) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
   });
 
-  function handleCSV(text){
+  function handleXLSX(arrayBuffer){
+    logBytesHash(new Uint8Array(arrayBuffer));
+    var workbook;
+    try {
+      workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
+    } catch (e){
+      loadError.textContent = 'Could not read this .xlsx file: ' + e.message;
+      return;
+    }
+    var sheet = workbook.Sheets[workbook.SheetNames[0]];
+    var table = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+    table = table.map(function(row){ return row.map(function(cell){ return String(cell); }); });
+    handleTable(table);
+  }
+
+  // Scans the first HEADER_SCAN_LIMIT rows for the one that actually
+  // contains Date, Merchant and Amount columns, skipping any metadata
+  // rows a raw export puts above the real table.
+  function findHeaderRow(table){
+    var limit = Math.min(table.length, HEADER_SCAN_LIMIT);
+    for (var i = 0; i < limit; i++){
+      var norm = table[i].map(function(h){ return h.trim().toLowerCase(); });
+      if (norm.indexOf('date') !== -1 && norm.indexOf('merchant') !== -1 && norm.indexOf('amount') !== -1){
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function handleTable(table){
     loadError.textContent = '';
     catStep.style.display = 'none';
     dashboard.style.display = 'none';
@@ -327,45 +371,51 @@
     catError.textContent = '';
     categorizedThisSession = 0;
 
-    logFileHash(text);
-
-    // Parse once. This table (and the dataRows/headerRow copied from it below)
-    // is the only in-memory representation of the file for the rest of the session.
-    var table = parseCSV(text);
     if (!table.length){ loadError.textContent = 'The file is empty.'; return; }
-    var rawHeaders = table[0];
+
+    var headerIdx = findHeaderRow(table);
+    if (headerIdx === -1){
+      loadError.textContent = 'Could not find a header row with Date, Merchant, and Amount columns in the first ' + HEADER_SCAN_LIMIT + ' rows.';
+      return;
+    }
+
+    var rawHeaders = table[headerIdx].slice();
     var norm = rawHeaders.map(function(h){ return h.trim().toLowerCase(); });
 
-    var required = ['date','merchant','amount','category'];
+    var required = ['date', 'merchant', 'amount'];
     var cols = {};
     for (var i = 0; i < required.length; i++){
-      var pos = norm.indexOf(required[i]);
-      if (pos === -1){
-        loadError.textContent = 'Missing required column: ' + required[i].charAt(0).toUpperCase() + required[i].slice(1);
-        return;
-      }
-      cols[required[i]] = pos;
+      cols[required[i]] = norm.indexOf(required[i]);
     }
     cols.card = norm.indexOf('card');
+    cols.category = norm.indexOf('category');
 
-    var body = table.slice(1).filter(function(line){
+    var body = table.slice(headerIdx + 1).filter(function(line){
       return line.some(function(f){ return f.trim() !== ''; });
     });
+
+    // No Category column at all: add one, blank, to the header and every
+    // row, so a raw export with no categorization yet still loads.
+    if (cols.category === -1){
+      cols.category = rawHeaders.length;
+      rawHeaders.push('Category');
+      body = body.map(function(line){ line = line.slice(); line[cols.category] = ''; return line; });
+    }
 
     // Validate every row before accepting any of it. A bad row anywhere
     // stops the whole load rather than being skipped or coerced.
     for (var r = 0; r < body.length; r++){
       var line = body[r];
-      var csvLine = r + 2; // +1 for 0-index, +1 for the header row
+      var lineNum = headerIdx + r + 2; // 1-indexed, plus the header row itself
       var merchant = (line[cols.merchant] || '').trim();
       var amount = parseAmount(line[cols.amount] || '');
       if (amount === null){
-        loadError.textContent = 'Row ' + csvLine + ' (MERCHANT: ' + merchant + '): Amount is \'' + (line[cols.amount] || '') + '\', not a number.';
+        loadError.textContent = 'Row ' + lineNum + ' (MERCHANT: ' + merchant + '): Amount is \'' + (line[cols.amount] || '') + '\', not a number.';
         return;
       }
       var d = new Date((line[cols.date] || '').trim());
       if (isNaN(d.getTime())){
-        loadError.textContent = 'Row ' + csvLine + ' (MERCHANT: ' + merchant + '): Date is \'' + (line[cols.date] || '') + '\', not a valid date.';
+        loadError.textContent = 'Row ' + lineNum + ' (MERCHANT: ' + merchant + '): Date is \'' + (line[cols.date] || '') + '\', not a valid date.';
         return;
       }
     }

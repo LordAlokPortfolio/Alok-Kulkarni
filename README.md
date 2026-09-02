@@ -38,54 +38,59 @@ nothing more.
 
 ## Getting started from a real Amex export
 
-Amex's own CSV export already has `Date`, `Amount`, and `Merchant`
-columns with those exact names, so no renaming is needed there. It also
-comes with columns the dashboard ignores (`Description`, `Address`, `City
-/ Province`, `Postal Code`, `Country`, `Reference`) and is missing the one
-column the dashboard actually requires: `Category`. One column needs
-adding before the first load:
+A raw Amex export, `.csv` or `.xlsx`, can be loaded directly. No manual
+cleanup is required:
 
 1. Download the repository (or just the `an-ledger/` folder) and open
    `an-ledger/index.html` by double-clicking it.
-2. Export transactions from the Amex site as CSV.
-3. Open that CSV in a spreadsheet and add a `Category` column. It can be
-   left entirely blank; the dashboard will still load the file, and the
-   "Categorize rows" button will offer to fill every blank row in one
-   pass using OpenAI's API (a personal API key is required, and each
-   categorize call costs a small, per-request amount on that account).
-   Categories can also just be typed in by hand instead, using one of:
-   Groceries, Dining, Fuel, Transport, Utilities, Phone/Internet,
-   Subscriptions, Insurance, Medical, Household, Clothing, Travel,
-   Entertainment, Fees/Interest, Payment, Other, UNCLEAR (no OpenAI key
-   needed if so). The extra Amex columns (Description, Address, etc.) can
-   stay; the dashboard just ignores anything it doesn't need. Add a
-   `Card` column too if more than one card's transactions are being
-   tracked together in the same file; otherwise skip it.
-4. Save that CSV and load it into `index.html` via the file picker.
+2. Export transactions from the Amex site, as CSV or Excel.
+3. Load that file into `index.html` via the file picker as-is.
+
+The dashboard handles the rest of the raw export on its own:
+
+- Some Amex exports put a few metadata rows (account holder, card name,
+  statement period) above the real table. The dashboard scans the first
+  30 rows for the one that actually contains `Date`, `Merchant`, and
+  `Amount` and treats everything above it as ignorable.
+- Extra columns the export includes (`Description`, `Address`, `City /
+  Province`, `Postal Code`, `Country`, `Reference`, and similar) are
+  matched by header name and just ignored; nothing needs deleting.
+- If there's no `Category` column at all, one is added automatically,
+  blank, exactly as if every row already had an empty `Category` cell.
+  From there, either use "Categorize rows" to fill it via OpenAI, or type
+  categories in by hand after downloading: one of Groceries, Dining,
+  Fuel, Transport, Utilities, Phone/Internet, Subscriptions, Insurance,
+  Medical, Household, Clothing, Travel, Entertainment, Fees/Interest,
+  Payment, Other, UNCLEAR.
+- A `Card` column is optional; add one only if more than one card's
+  transactions are tracked together in the same file.
 
 From then on, the same file is reused: new transactions get appended to
 the bottom each month, not a new file each time, and reloaded.
 
 ## `an-ledger/index.html`: spending dashboard
 
-Loads a CSV of transactions and shows a monthly bar chart against an
-editable spend ceiling, a month-by-category breakdown, and which month(s)
-went over.
+Loads a `.csv` or `.xlsx` of transactions and shows a monthly bar chart
+against an editable spend ceiling, a month-by-category breakdown, and
+which month(s) went over.
 
-See "Getting started from a real Amex export" above for the one-time
-setup. After that, it's one running CSV file: new transactions get
-appended to the end, not a new file each month, and sorted by date, and
-that same file is reloaded into the tool each time. The tool re-reads the
-whole thing from scratch; it doesn't remember anything between loads.
+See "Getting started from a real Amex export" above for what happens to
+a raw export on load: metadata rows above the real table are skipped, a
+missing `Category` column is added blank, and extra columns are ignored.
+After that, it's one running file: new transactions get appended to the
+end, not a new file each month, and sorted by date, and that same file
+is reloaded into the tool each time. The tool re-reads the whole thing
+from scratch; it doesn't remember anything between loads.
 
-**Required columns** (case-insensitive, matched by header name, not
-position): `Date`, `Merchant`, `Amount`, `Category`. `Amount` is positive
-for a charge, negative for a refund. `Category` is one of: Groceries,
-Dining, Fuel, Transport, Utilities, Phone/Internet, Subscriptions,
-Insurance, Medical, Household, Clothing, Travel, Entertainment,
-Fees/Interest, Payment, Other, UNCLEAR. `Card` is optional; if it's
-missing every row is treated as `Amex`. If a required column is missing,
-the tool names it and refuses to load the file.
+**Required columns**, once the real header row is found (case-insensitive,
+matched by header name, not position): `Date`, `Merchant`, `Amount`.
+`Amount` is positive for a charge, negative for a refund. `Category` is
+added automatically if missing, and is one of: Groceries, Dining, Fuel,
+Transport, Utilities, Phone/Internet, Subscriptions, Insurance, Medical,
+Household, Clothing, Travel, Entertainment, Fees/Interest, Payment,
+Other, UNCLEAR. `Card` is optional; if it's missing every row is treated
+as `Amex`. If `Date`, `Merchant`, or `Amount` can't be found in any of
+the first 30 rows, the tool says so and refuses to load the file.
 
 **Categorizing new rows:** newly appended transactions won't have a
 `Category` yet. The page shows how many and offers a "Categorize rows"
@@ -104,7 +109,11 @@ first.
 
 This tool touches financial data, so it checks itself at every step:
 
-- The file is parsed once, held in memory, and never re-read.
+- The file is parsed once, held in memory, and never re-read. `.xlsx`
+  files are parsed entirely in the browser using a vendored copy of
+  [SheetJS](https://sheetjs.com) (`an-ledger/vendor/xlsx.full.min.js`,
+  MIT licensed, loaded locally, no network request); no file content
+  goes anywhere but through that local parser.
 - Every row's `Amount` must be numeric and every row's `Date` must be
   valid before anything renders. The first bad row stops the load and
   names the row, the column, and the bad value.
