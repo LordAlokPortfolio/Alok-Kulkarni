@@ -130,4 +130,4 @@ alerting from the same render.
 - **Founding partner**: early access, pricing negotiation, co-marketing.
   Let's talk.
 
-Contact: [your email]
+Contact via GitHub
