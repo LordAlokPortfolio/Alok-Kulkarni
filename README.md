@@ -158,6 +158,22 @@ This tool touches financial data, so it checks itself at every step:
 - The browser console logs the loaded file's byte count and SHA-256 hash
   on every load, as a reference if the read ever needs to be proven.
 
+## `an-ledger/multi-card.html`: household dashboard
+
+For household multi-card tracking, use `multi-card.html`. Same layout,
+guardrails, and categorizing as `index.html`, plus two extra columns —
+`Card` (which card the transaction came off) and `Person` (who spent it)
+— and three filters above the chart: Person, Card, and a View selector
+for Total household / Split by person / Split by card. Filters change
+only what is displayed; the download always writes every original row.
+
+## `an-ledger/spend-clarity/`: standalone variance component
+
+A separate, dependency-free JavaScript component that renders spending
+variance as a rose diagram, unrelated to the dashboards above. Open
+`spend-clarity/demo.html` by double-clicking it; see
+`spend-clarity/spec.md` for the API.
+
 ## `an-ledger/rebuild.html`: line of credit rebuild tracker
 
 A standalone household tracker, unrelated to the dashboard beyond shared

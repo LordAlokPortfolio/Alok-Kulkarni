@@ -1,0 +1,89 @@
+Date,Merchant,Amount,Category
+2026-02-03,Loblaws,90,Groceries
+2026-02-04,Uber,36,Transport
+2026-02-04,Rogers,84,Utilities
+2026-02-05,Tim Hortons,72,Dining
+2026-02-05,Petro-Canada,108,Fuel
+2026-02-05,Netflix,27,Subscriptions
+2026-02-10,Presto,24,Transport
+2026-02-12,Enbridge,56,Utilities
+2026-02-13,Esso Circle K,72,Fuel
+2026-02-15,Costco,60,Groceries
+2026-02-16,Spotify,18,Subscriptions
+2026-02-18,Chipotle,48,Dining
+2026-03-04,Uber,36.6,Transport
+2026-03-05,Loblaws,94.8,Groceries
+2026-03-06,Netflix,27,Subscriptions
+2026-03-06,Rogers,79.2,Utilities
+2026-03-07,Tim Hortons,79.2,Dining
+2026-03-07,Petro-Canada,105.6,Fuel
+2026-03-10,Presto,24.4,Transport
+2026-03-10,Enbridge,52.8,Utilities
+2026-03-11,Costco,63.2,Groceries
+2026-03-13,Esso Circle K,70.4,Fuel
+2026-03-13,Spotify,18,Subscriptions
+2026-03-17,Chipotle,52.8,Dining
+2026-04-03,Rogers,70.8,Utilities
+2026-04-06,Petro-Canada,102.6,Fuel
+2026-04-07,Uber,35.4,Transport
+2026-04-07,Netflix,27,Subscriptions
+2026-04-08,Loblaws,123,Groceries
+2026-04-08,Tim Hortons,84.6,Dining
+2026-04-10,Chipotle,56.4,Dining
+2026-04-11,Esso Circle K,68.4,Fuel
+2026-04-12,Costco,82,Groceries
+2026-04-12,Enbridge,47.2,Utilities
+2026-04-14,Presto,23.6,Transport
+2026-04-18,Spotify,18,Subscriptions
+2026-05-03,Rogers,59.4,Utilities
+2026-05-04,Loblaws,96,Groceries
+2026-05-04,Tim Hortons,153,Dining
+2026-05-06,Uber,36,Transport
+2026-05-07,Petro-Canada,101.4,Fuel
+2026-05-07,Netflix,27,Subscriptions
+2026-05-11,Spotify,18,Subscriptions
+2026-05-12,Enbridge,39.6,Utilities
+2026-05-15,Costco,64,Groceries
+2026-05-16,Chipotle,102,Dining
+2026-05-16,Presto,24,Transport
+2026-05-18,Esso Circle K,67.6,Fuel
+2026-06-03,Netflix,31.2,Subscriptions
+2026-06-04,Loblaws,91.2,Groceries
+2026-06-04,Tim Hortons,82.8,Dining
+2026-06-04,Uber,37.2,Transport
+2026-06-05,Petro-Canada,57,Fuel
+2026-06-05,Rogers,63,Utilities
+2026-06-11,Costco,60.8,Groceries
+2026-06-12,Spotify,20.8,Subscriptions
+2026-06-15,Esso Circle K,38,Fuel
+2026-06-15,Presto,24.8,Transport
+2026-06-16,Enbridge,42,Utilities
+2026-06-17,Chipotle,55.2,Dining
+2026-07-04,Uber,36,Transport
+2026-07-05,Netflix,27,Subscriptions
+2026-07-06,Petro-Canada,60.6,Fuel
+2026-07-06,Air Canada,870,Travel
+2026-07-07,Rogers,75.6,Utilities
+2026-07-08,Loblaws,89.4,Groceries
+2026-07-08,Tim Hortons,75.6,Dining
+2026-07-10,Esso Circle K,40.4,Fuel
+2026-07-10,Qatar Airways,580,Travel
+2026-07-12,Costco,59.6,Groceries
+2026-07-14,Chipotle,50.4,Dining
+2026-07-16,Presto,24,Transport
+2026-07-16,Enbridge,50.4,Utilities
+2026-07-18,Spotify,18,Subscriptions
+2026-08-03,Loblaws,93.6,Groceries
+2026-08-03,Petro-Canada,104.4,Fuel
+2026-08-03,Uber,36.6,Transport
+2026-08-03,Air Canada,192,Travel
+2026-08-03,Rogers,80.4,Utilities
+2026-08-07,Netflix,27,Subscriptions
+2026-08-08,Tim Hortons,78,Dining
+2026-08-14,Enbridge,53.6,Utilities
+2026-08-15,Costco,62.4,Groceries
+2026-08-15,Esso Circle K,69.6,Fuel
+2026-08-16,Chipotle,52,Dining
+2026-08-17,Spotify,18,Subscriptions
+2026-08-18,Presto,24.4,Transport
+2026-08-18,Qatar Airways,128,Travel

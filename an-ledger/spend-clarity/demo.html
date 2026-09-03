@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spend Clarity — spending variance visualized</title>
+<style>
+  :root{
+    --ink:#16232E;
+    --paper:#F2F4F3;
+    --rule:#C7D0CC;
+    --green:#0ca30c;
+    --red:#d03b3b;
+    --gray:#8b949a;
+    --dim:#5E6D6A;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:ui-sans-serif,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper)}
+  .wrap{
+    font-family:var(--serif);
+    color:var(--ink);
+    max-width:980px;
+    margin:0 auto;
+    padding:26px 20px 60px;
+    line-height:1.45;
+  }
+  .kicker{font-family:var(--sans);font-size:11px;letter-spacing:.06em;color:var(--dim);margin:0 0 6px}
+  h1{font-size:30px;font-weight:400;line-height:1.15;margin:0 0 14px;letter-spacing:-.01em}
+  .lede{font-size:16px;color:var(--dim);margin:0 0 8px;max-width:60ch}
+  .uses{font-family:var(--sans);font-size:13px;color:var(--dim);margin:16px 0 0;max-width:62ch}
+  .uses ul{margin:6px 0 0;padding-left:18px}
+  .uses li{margin-bottom:4px}
+  .step{border-top:2px solid var(--ink);padding-top:14px;margin:30px 0 24px}
+  .step h2{font-size:13px;font-family:var(--sans);font-weight:600;margin:0 0 4px}
+  .step p.sub{font-family:var(--sans);font-size:12px;color:var(--dim);margin:0 0 10px}
+  .charts{display:flex;flex-wrap:wrap;gap:20px}
+  .chartCard{background:#fff;border:1px solid var(--rule);border-radius:3px;padding:8px}
+  button{
+    font-family:var(--sans);font-size:13px;font-weight:600;color:var(--paper);
+    background:var(--ink);border:none;border-radius:2px;padding:9px 14px;cursor:pointer;
+  }
+  .legend{font-family:var(--sans);font-size:12px;color:var(--dim);margin-top:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px;margin-right:16px}
+  .legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+  #explain{display:none;font-family:var(--sans);font-size:12px;color:var(--dim);margin-top:12px;max-width:64ch}
+  #explain code{background:#fff;border:1px solid var(--rule);padding:1px 4px;border-radius:2px}
+  #drill{font-family:var(--sans);font-size:12px;margin-top:16px}
+  table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:12px;margin-top:8px}
+  th,td{border-bottom:1px solid var(--rule);padding:6px 8px;text-align:right;white-space:nowrap}
+  th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+  thead th{color:var(--dim);font-weight:600;border-bottom:2px solid var(--ink)}
+  .foot{font-family:var(--sans);font-size:11px;color:var(--dim);margin-top:36px;padding-top:12px;border-top:1px solid var(--rule)}
+</style>
+<script src="spend-clarity.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">Spend Clarity</p>
+  <h1>Spending variance visualized</h1>
+  <p class="lede">This component reveals spending patterns and anomalies that bar charts hide. Click any petal to see the transactions behind it.</p>
+
+  <div class="uses">
+    <strong>Use this in your app:</strong>
+    <ul>
+      <li>Financial advisor dashboards, to show clients their cashflow</li>
+      <li>Credit card apps, to help customers understand spending shifts</li>
+      <li>Banking apps, to flag budget anomalies automatically</li>
+      <li>Any platform that takes transaction data and needs a visual story</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <h2>Three months, three stories</h2>
+    <p class="sub">Same component, same data, three different comparisons. The inner grey petal is the baseline month; the coloured petal over it is the target month.</p>
+    <div class="charts" id="charts"></div>
+    <div class="legend">
+      <span><i style="background:var(--red)"></i>Over baseline by 20%+</span>
+      <span><i style="background:var(--green)"></i>Under baseline by 5%+</span>
+      <span><i style="background:var(--gray)"></i>Effectively flat</span>
+    </div>
+    <button id="explainBtn" style="margin-top:12px">Show variance explanation</button>
+    <div id="explain">
+      <p>Each category is compared against the same category in the baseline month:</p>
+      <p><code>variance = (target − baseline) / baseline</code></p>
+      <ul>
+        <li><code>variance &gt; 0.20</code> → red petal (spending grew 20% or more)</li>
+        <li><code>variance &lt; -0.05</code> → green petal (spending fell more than 5%)</li>
+        <li>otherwise → grey petal (effectively flat)</li>
+        <li>baseline of zero → red if there is new spending, grey if still zero</li>
+      </ul>
+      <p>Petal length is proportional to the <em>square root</em> of the amount, because a petal's visual weight is its area. Scaling length linearly would make twice the spending look four times as big.</p>
+      <p>Thresholds and colours are constants at the top of <code>spend-clarity.js</code>, meant to be tuned per product.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2>Drill-down</h2>
+    <p class="sub">The component returns an SVG string and nothing else. Every petal carries <code>data-category</code>, so this page attaches its own click listener — your app would do the same and open whatever UI it likes.</p>
+    <div id="drill">Click a petal above to see its transactions.</div>
+  </div>
+
+  <p class="foot">Spend Clarity runs entirely in the browser: no server, no API key, no login, no dependencies. Open this file by double-clicking it.</p>
+</div>
+
+<script>
+// Sample data is inlined rather than fetched, so this demo works when the
+// file is opened directly from disk (browsers block fetch() over file://).
+// The same rows are in sample-data.csv for anyone who wants the raw file.
+var TRANSACTIONS = [
+  { date: "2026-02-03", merchant: "Loblaws", amount: 90, category: "Groceries" },
+  { date: "2026-02-04", merchant: "Uber", amount: 36, category: "Transport" },
+  { date: "2026-02-04", merchant: "Rogers", amount: 84, category: "Utilities" },
+  { date: "2026-02-05", merchant: "Tim Hortons", amount: 72, category: "Dining" },
+  { date: "2026-02-05", merchant: "Petro-Canada", amount: 108, category: "Fuel" },
+  { date: "2026-02-05", merchant: "Netflix", amount: 27, category: "Subscriptions" },
+  { date: "2026-02-10", merchant: "Presto", amount: 24, category: "Transport" },
+  { date: "2026-02-12", merchant: "Enbridge", amount: 56, category: "Utilities" },
+  { date: "2026-02-13", merchant: "Esso Circle K", amount: 72, category: "Fuel" },
+  { date: "2026-02-15", merchant: "Costco", amount: 60, category: "Groceries" },
+  { date: "2026-02-16", merchant: "Spotify", amount: 18, category: "Subscriptions" },
+  { date: "2026-02-18", merchant: "Chipotle", amount: 48, category: "Dining" },
+  { date: "2026-03-04", merchant: "Uber", amount: 36.6, category: "Transport" },
+  { date: "2026-03-05", merchant: "Loblaws", amount: 94.8, category: "Groceries" },
+  { date: "2026-03-06", merchant: "Netflix", amount: 27, category: "Subscriptions" },
+  { date: "2026-03-06", merchant: "Rogers", amount: 79.2, category: "Utilities" },
+  { date: "2026-03-07", merchant: "Tim Hortons", amount: 79.2, category: "Dining" },
+  { date: "2026-03-07", merchant: "Petro-Canada", amount: 105.6, category: "Fuel" },
+  { date: "2026-03-10", merchant: "Presto", amount: 24.4, category: "Transport" },
+  { date: "2026-03-10", merchant: "Enbridge", amount: 52.8, category: "Utilities" },
+  { date: "2026-03-11", merchant: "Costco", amount: 63.2, category: "Groceries" },
+  { date: "2026-03-13", merchant: "Esso Circle K", amount: 70.4, category: "Fuel" },
+  { date: "2026-03-13", merchant: "Spotify", amount: 18, category: "Subscriptions" },
+  { date: "2026-03-17", merchant: "Chipotle", amount: 52.8, category: "Dining" },
+  { date: "2026-04-03", merchant: "Rogers", amount: 70.8, category: "Utilities" },
+  { date: "2026-04-06", merchant: "Petro-Canada", amount: 102.6, category: "Fuel" },
+  { date: "2026-04-07", merchant: "Uber", amount: 35.4, category: "Transport" },
+  { date: "2026-04-07", merchant: "Netflix", amount: 27, category: "Subscriptions" },
+  { date: "2026-04-08", merchant: "Loblaws", amount: 123, category: "Groceries" },
+  { date: "2026-04-08", merchant: "Tim Hortons", amount: 84.6, category: "Dining" },
+  { date: "2026-04-10", merchant: "Chipotle", amount: 56.4, category: "Dining" },
+  { date: "2026-04-11", merchant: "Esso Circle K", amount: 68.4, category: "Fuel" },
+  { date: "2026-04-12", merchant: "Costco", amount: 82, category: "Groceries" },
+  { date: "2026-04-12", merchant: "Enbridge", amount: 47.2, category: "Utilities" },
+  { date: "2026-04-14", merchant: "Presto", amount: 23.6, category: "Transport" },
+  { date: "2026-04-18", merchant: "Spotify", amount: 18, category: "Subscriptions" },
+  { date: "2026-05-03", merchant: "Rogers", amount: 59.4, category: "Utilities" },
+  { date: "2026-05-04", merchant: "Loblaws", amount: 96, category: "Groceries" },
+  { date: "2026-05-04", merchant: "Tim Hortons", amount: 153, category: "Dining" },
+  { date: "2026-05-06", merchant: "Uber", amount: 36, category: "Transport" },
+  { date: "2026-05-07", merchant: "Petro-Canada", amount: 101.4, category: "Fuel" },
+  { date: "2026-05-07", merchant: "Netflix", amount: 27, category: "Subscriptions" },
+  { date: "2026-05-11", merchant: "Spotify", amount: 18, category: "Subscriptions" },
+  { date: "2026-05-12", merchant: "Enbridge", amount: 39.6, category: "Utilities" },
+  { date: "2026-05-15", merchant: "Costco", amount: 64, category: "Groceries" },
+  { date: "2026-05-16", merchant: "Chipotle", amount: 102, category: "Dining" },
+  { date: "2026-05-16", merchant: "Presto", amount: 24, category: "Transport" },
+  { date: "2026-05-18", merchant: "Esso Circle K", amount: 67.6, category: "Fuel" },
+  { date: "2026-06-03", merchant: "Netflix", amount: 31.2, category: "Subscriptions" },
+  { date: "2026-06-04", merchant: "Loblaws", amount: 91.2, category: "Groceries" },
+  { date: "2026-06-04", merchant: "Tim Hortons", amount: 82.8, category: "Dining" },
+  { date: "2026-06-04", merchant: "Uber", amount: 37.2, category: "Transport" },
+  { date: "2026-06-05", merchant: "Petro-Canada", amount: 57, category: "Fuel" },
+  { date: "2026-06-05", merchant: "Rogers", amount: 63, category: "Utilities" },
+  { date: "2026-06-11", merchant: "Costco", amount: 60.8, category: "Groceries" },
+  { date: "2026-06-12", merchant: "Spotify", amount: 20.8, category: "Subscriptions" },
+  { date: "2026-06-15", merchant: "Esso Circle K", amount: 38, category: "Fuel" },
+  { date: "2026-06-15", merchant: "Presto", amount: 24.8, category: "Transport" },
+  { date: "2026-06-16", merchant: "Enbridge", amount: 42, category: "Utilities" },
+  { date: "2026-06-17", merchant: "Chipotle", amount: 55.2, category: "Dining" },
+  { date: "2026-07-04", merchant: "Uber", amount: 36, category: "Transport" },
+  { date: "2026-07-05", merchant: "Netflix", amount: 27, category: "Subscriptions" },
+  { date: "2026-07-06", merchant: "Petro-Canada", amount: 60.6, category: "Fuel" },
+  { date: "2026-07-06", merchant: "Air Canada", amount: 870, category: "Travel" },
+  { date: "2026-07-07", merchant: "Rogers", amount: 75.6, category: "Utilities" },
+  { date: "2026-07-08", merchant: "Loblaws", amount: 89.4, category: "Groceries" },
+  { date: "2026-07-08", merchant: "Tim Hortons", amount: 75.6, category: "Dining" },
+  { date: "2026-07-10", merchant: "Esso Circle K", amount: 40.4, category: "Fuel" },
+  { date: "2026-07-10", merchant: "Qatar Airways", amount: 580, category: "Travel" },
+  { date: "2026-07-12", merchant: "Costco", amount: 59.6, category: "Groceries" },
+  { date: "2026-07-14", merchant: "Chipotle", amount: 50.4, category: "Dining" },
+  { date: "2026-07-16", merchant: "Presto", amount: 24, category: "Transport" },
+  { date: "2026-07-16", merchant: "Enbridge", amount: 50.4, category: "Utilities" },
+  { date: "2026-07-18", merchant: "Spotify", amount: 18, category: "Subscriptions" },
+  { date: "2026-08-03", merchant: "Loblaws", amount: 93.6, category: "Groceries" },
+  { date: "2026-08-03", merchant: "Petro-Canada", amount: 104.4, category: "Fuel" },
+  { date: "2026-08-03", merchant: "Uber", amount: 36.6, category: "Transport" },
+  { date: "2026-08-03", merchant: "Air Canada", amount: 192, category: "Travel" },
+  { date: "2026-08-03", merchant: "Rogers", amount: 80.4, category: "Utilities" },
+  { date: "2026-08-07", merchant: "Netflix", amount: 27, category: "Subscriptions" },
+  { date: "2026-08-08", merchant: "Tim Hortons", amount: 78, category: "Dining" },
+  { date: "2026-08-14", merchant: "Enbridge", amount: 53.6, category: "Utilities" },
+  { date: "2026-08-15", merchant: "Costco", amount: 62.4, category: "Groceries" },
+  { date: "2026-08-15", merchant: "Esso Circle K", amount: 69.6, category: "Fuel" },
+  { date: "2026-08-16", merchant: "Chipotle", amount: 52, category: "Dining" },
+  { date: "2026-08-17", merchant: "Spotify", amount: 18, category: "Subscriptions" },
+  { date: "2026-08-18", merchant: "Presto", amount: 24.4, category: "Transport" },
+  { date: "2026-08-18", merchant: "Qatar Airways", amount: 128, category: "Travel" }];
+
+var CATEGORIES = ['Groceries','Dining','Fuel','Transport','Subscriptions','Travel','Utilities'];
+
+// Three comparisons chosen to show all three states in this dataset.
+var COMPARISONS = [
+  { baseline: '2026-02', target: '2026-03', caption: 'Feb to Mar — a quiet month' },
+  { baseline: '2026-04', target: '2026-05', caption: 'Apr to May — dining spikes' },
+  { baseline: '2026-06', target: '2026-07', caption: 'Jun to Jul — a holiday appears' }
+];
+
+var chartsEl = document.getElementById('charts');
+chartsEl.innerHTML = COMPARISONS.map(function(c){
+  var svg = SpendClarity.renderRoseDiagram({
+    transactions: TRANSACTIONS,
+    categories: CATEGORIES,
+    baselineMonth: c.baseline,
+    targetMonth: c.target,
+    width: 280,
+    height: 280,
+    colorScheme: 'default'
+  });
+  return '<div class="chartCard" data-baseline="' + c.baseline + '" data-target="' + c.target + '">' +
+    svg + '<p class="sub" style="margin:6px 0 0">' + c.caption + '</p></div>';
+}).join('');
+
+// One delegated listener covers every petal in every diagram, and keeps
+// working after a re-render. This is the integration pattern.
+chartsEl.addEventListener('click', function(e){
+  var petal = e.target.closest('[data-category]');
+  if (!petal) return;
+  var card = petal.closest('.chartCard');
+  showDrilldown(petal.getAttribute('data-category'), card.getAttribute('data-baseline'), card.getAttribute('data-target'));
+});
+
+function money(n){
+  return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-CA', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function showDrilldown(category, baselineMonth, targetMonth){
+  var rows = TRANSACTIONS.filter(function(t){
+    return t.category === category &&
+      (t.date.slice(0,7) === baselineMonth || t.date.slice(0,7) === targetMonth);
+  }).sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+
+  var baseTotal = 0, targetTotal = 0;
+  rows.forEach(function(t){
+    if (t.date.slice(0,7) === baselineMonth) baseTotal += t.amount; else targetTotal += t.amount;
+  });
+
+  var html = '<strong>' + category + '</strong> — ' + targetMonth + ' ' + money(targetTotal) +
+    ' vs ' + baselineMonth + ' ' + money(baseTotal) +
+    ' (' + (targetTotal - baseTotal >= 0 ? '+' : '') + money(targetTotal - baseTotal) + ')';
+  html += '<table><thead><tr><th>Date</th><th>Merchant</th><th>Amount</th></tr></thead><tbody>' +
+    rows.map(function(t){
+      return '<tr><td>' + t.date + '</td><td>' + t.merchant + '</td><td>' + money(t.amount) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  document.getElementById('drill').innerHTML = html;
+}
+
+document.getElementById('explainBtn').addEventListener('click', function(){
+  var box = document.getElementById('explain');
+  var open = box.style.display === 'block';
+  box.style.display = open ? 'none' : 'block';
+  this.textContent = open ? 'Show variance explanation' : 'Hide variance explanation';
+});
+</script>
+</body>
+</html>

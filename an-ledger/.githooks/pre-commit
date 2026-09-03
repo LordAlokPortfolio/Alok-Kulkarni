@@ -1,7 +1,9 @@
 #!/bin/sh
-# Refuses the commit if any staged file other than sample.csv looks like
-# statement data or a secret (.csv, .xlsx, .env, .key).
-blocked=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(csv|xlsx|env|key)$' | grep -v -E '(^|/)sample\.csv$')
+# Refuses the commit if any staged file looks like statement data or a
+# secret (.csv, .xlsx, .env, .key). The only exceptions are the two
+# fake-data files the project ships on purpose: sample.csv and
+# spend-clarity/sample-data.csv.
+blocked=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(csv|xlsx|env|key)$' | grep -v -E '(^|/)(sample\.csv|sample-data\.csv)$')
 
 if [ -n "$blocked" ]; then
   echo "pre-commit: refusing to commit statement/secret-like files:"
