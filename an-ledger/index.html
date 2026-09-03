@@ -560,20 +560,68 @@
 
   catBtn.addEventListener('click', function(){ categorizeRows(); });
 
-  function categorizeRows(){
+  var CATEGORIZE_BATCH_SIZE = 25; // keeps each request/response small enough to never get truncated
+
+  async function categorizeRows(){
     var key = apiKeyInput.value.trim();
     if (!key){ catError.textContent = 'Enter an OpenAI API key first.'; return; }
     localStorage.setItem(API_KEY_KEY, key);
     var targets = rows.filter(function(r){ return !r.category; });
-    var expectedCount = targets.length;
-    if (!expectedCount) return;
+    if (!targets.length) return;
     catError.textContent = '';
     catBtn.disabled = true;
-    catBtn.textContent = 'Categorizing…';
 
-    // Each row carries its own id so the response can be matched back to
-    // the right row explicitly, not by list position — one hallucinated
-    // extra or duplicate entry then can't misalign every other answer.
+    var batches = [];
+    for (var i = 0; i < targets.length; i += CATEGORIZE_BATCH_SIZE){
+      batches.push(targets.slice(i, i + CATEGORIZE_BATCH_SIZE));
+    }
+
+    var totalApplied = 0;
+    var failures = [];
+
+    for (var b = 0; b < batches.length; b++){
+      var batch = batches[b];
+      var from = b * CATEGORIZE_BATCH_SIZE + 1;
+      var to = from + batch.length - 1;
+      catBtn.textContent = 'Categorizing ' + from + '-' + to + ' of ' + targets.length + '…';
+      try {
+        totalApplied += await categorizeBatch(batch, key);
+      } catch (err){
+        failures.push('rows ' + from + '-' + to + ': ' + err.message);
+        console.warn('A&N Ledger: categorize batch (rows ' + from + '-' + to + ') failed:', err);
+      }
+      // Reflect progress after every batch, not just at the end, so
+      // earlier successful batches are never lost if a later one fails.
+      rebuildRows();
+      buildCardFilter();
+      renderDashboard();
+    }
+
+    var remaining = rows.filter(function(r){ return !r.category; }).length;
+    catNote.textContent = remaining
+      ? totalApplied + ' categorized this run, ' + remaining + ' row' + (remaining === 1 ? '' : 's') + ' left for you to set by hand below.'
+      : 'All rows categorized.';
+    catBtn.textContent = remaining ? ('Categorize ' + remaining + ' rows') : 'Categorize rows';
+    catBtn.disabled = false;
+    catError.textContent = failures.length
+      ? failures.length + ' of ' + batches.length + ' batch' + (batches.length === 1 ? '' : 'es') +
+        ' failed (see console for details): ' + failures.join('; ') + '. Affected rows are listed below to fix by hand.'
+      : '';
+    downloadBtn.style.display = 'inline-block';
+    downloadWarning.style.display = 'block';
+    showVerifySummary();
+    buildCardFilter();
+    renderDashboard();
+    renderManualCategorize();
+  }
+
+  // Sends one batch (<= CATEGORIZE_BATCH_SIZE rows) to OpenAI and applies
+  // whatever comes back, matched by id. Returns how many rows it applied.
+  function categorizeBatch(targets, key){
+    // Each row carries its own id, local to this batch, so the response
+    // can be matched back to the right row explicitly, not by list
+    // position — one hallucinated extra or duplicate entry then can't
+    // misalign every other answer in the batch.
     var payload = targets.map(function(r, i){
       var row = { id: i, merchant: r.merchant, amount: r.amount };
       if (r.description) row.description = r.description;
@@ -589,7 +637,7 @@
       'with exactly one entry per transaction below, each entry\'s "id" copied exactly from that transaction\'s ' +
       '"id" field. Do not add, skip, or duplicate any id:\n' + JSON.stringify(payload);
 
-    fetch('https://api.openai.com/v1/chat/completions', {
+    return fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -610,16 +658,16 @@
       var content = data.choices[0].message.content;
       var parsed = JSON.parse(content);
       var list = Array.isArray(parsed) ? parsed : (parsed.categories || Object.values(parsed)[0]);
-      console.log('A&N Ledger: categorize request sent', payload);
-      console.log('A&N Ledger: categorize response received', list);
+      console.log('A&N Ledger: categorize batch request sent', payload);
+      console.log('A&N Ledger: categorize batch response received', list);
       if (!Array.isArray(list)){
-        throw new Error('Model returned an unexpected shape (see console for what came back). File not modified.');
+        throw new Error('unexpected response shape (see console)');
       }
 
       // Build id -> category from whatever came back, then apply only the
-      // entries whose id matches a row we actually asked about. Extra or
-      // duplicate ids are logged and ignored rather than failing everything;
-      // a row whose id never comes back just stays blank for the table below.
+      // entries whose id matches a row in this batch. Extra or duplicate
+      // ids are logged and ignored rather than failing the whole batch; a
+      // row whose id never comes back just stays blank for the table below.
       var byId = {};
       var extra = 0;
       list.forEach(function(entry){
@@ -643,31 +691,8 @@
         dataRows[r.line][idx.category] = cat;
         applied++;
       });
-
-      if (!applied){
-        throw new Error('OpenAI\'s response didn\'t match any of the ' + expectedCount +
-          ' rows sent (see console for what came back). File not modified — use the table below to fix rows by hand.');
-      }
-
       categorizedThisSession += applied;
-      rebuildRows();
-
-      var remaining = rows.filter(function(r){ return !r.category; }).length;
-      catNote.textContent = remaining
-        ? applied + ' categorized, ' + remaining + ' row' + (remaining === 1 ? '' : 's') + ' left for you to set by hand below.'
-        : 'All rows categorized.';
-      catBtn.textContent = remaining ? ('Categorize ' + remaining + ' rows') : 'Categorize rows';
-      downloadBtn.style.display = 'inline-block';
-      downloadWarning.style.display = 'block';
-      showVerifySummary();
-      buildCardFilter();
-      renderDashboard();
-      renderManualCategorize();
-    }).catch(function(err){
-      catError.textContent = err.message;
-      renderManualCategorize();
-    }).finally(function(){
-      catBtn.disabled = false;
+      return applied;
     });
   }
 

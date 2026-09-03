@@ -105,14 +105,22 @@ touched. The OpenAI API key is entered in a password field on the page;
 it's stored only in that browser's `localStorage` and is never written to
 a file.
 
+Rows are sent 25 at a time, not all at once — a single request covering
+hundreds of rows (easy to reach once several months' files are loaded
+together) risks a response too large for the model to finish cleanly,
+which fails with a truncated, unparseable reply. Batching keeps each
+request small enough to avoid that, and one failed batch doesn't cost the
+others: earlier successful batches stay applied regardless of what a
+later one does.
+
 Each row sent is tagged with an id, and the response is matched back by
 that id, not by list position — so if OpenAI's response has an extra,
 missing, or duplicate entry (a real, fairly common quirk of this kind of
 request), only the rows it couldn't cleanly match stay blank; everything
 it did answer correctly still gets applied, instead of the whole batch
-being thrown out over one bad entry. A row that comes back `UNCLEAR`, or
-that the API couldn't match at all, or a call that fails outright, all
-land in the same place: a small table listing every still-blank row with
+being thrown out over one bad entry. A row that comes back `UNCLEAR`, a
+batch that fails outright, or anything the API couldn't match, all land
+in the same place: a small table listing every still-blank row with
 a dropdown to set its category by hand, on the spot, no retry needed —
 that table is always available, even before trying "Categorize rows" at
 all.
