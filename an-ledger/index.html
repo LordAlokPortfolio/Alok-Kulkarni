@@ -94,6 +94,19 @@
     color:var(--dim);
     margin:8px 0 0;
   }
+  .progressBar{
+    width:100%;
+    height:8px;
+    background:var(--rule);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .progressBar > div{
+    height:100%;
+    width:0%;
+    background:var(--green);
+    transition:width .2s ease;
+  }
   .warnbox{
     font-family:var(--sans);
     font-size:12px;
@@ -167,6 +180,10 @@
       </div>
       <button id="catBtn">Categorize rows</button>
     </div>
+    <div id="catProgressWrap" style="display:none;margin-top:8px;max-width:340px">
+      <div class="progressBar"><div id="catProgressFill"></div></div>
+      <p class="note" id="catProgressLabel"></p>
+    </div>
     <p class="msg" id="catError"></p>
     <div id="manualCatWrap" style="display:none;margin-top:10px">
       <p class="note" id="manualCatNote"></p>
@@ -232,6 +249,9 @@
   var catNote = document.getElementById('catNote');
   var catError = document.getElementById('catError');
   var catBtn = document.getElementById('catBtn');
+  var catProgressWrap = document.getElementById('catProgressWrap');
+  var catProgressFill = document.getElementById('catProgressFill');
+  var catProgressLabel = document.getElementById('catProgressLabel');
   var manualCatWrap = document.getElementById('manualCatWrap');
   var manualCatNote = document.getElementById('manualCatNote');
   var manualCatTable = document.getElementById('manualCatTable');
@@ -578,24 +598,30 @@
 
     var totalApplied = 0;
     var failures = [];
+    catProgressWrap.style.display = 'block';
+    catProgressFill.style.width = '0%';
 
     for (var b = 0; b < batches.length; b++){
       var batch = batches[b];
       var from = b * CATEGORIZE_BATCH_SIZE + 1;
       var to = from + batch.length - 1;
-      catBtn.textContent = 'Categorizing ' + from + '-' + to + ' of ' + targets.length + '…';
+      catBtn.textContent = 'Categorizing…';
+      catProgressLabel.textContent = 'Batch ' + (b + 1) + ' of ' + batches.length + ' (rows ' + from + '-' + to + ' of ' + targets.length + ')';
       try {
         totalApplied += await categorizeBatch(batch, key);
       } catch (err){
         failures.push('rows ' + from + '-' + to + ': ' + err.message);
         console.warn('A&N Ledger: categorize batch (rows ' + from + '-' + to + ') failed:', err);
       }
+      catProgressFill.style.width = Math.round(((b + 1) / batches.length) * 100) + '%';
       // Reflect progress after every batch, not just at the end, so
       // earlier successful batches are never lost if a later one fails.
       rebuildRows();
       buildCardFilter();
       renderDashboard();
     }
+
+    catProgressWrap.style.display = 'none';
 
     var remaining = rows.filter(function(r){ return !r.category; }).length;
     catNote.textContent = remaining
