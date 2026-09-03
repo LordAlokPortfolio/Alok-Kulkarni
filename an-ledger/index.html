@@ -147,12 +147,12 @@
 <div class="wrap">
   <p class="kicker">A&amp;N Ledger</p>
   <h1>Spending dashboard</h1>
-  <p class="lede">Pick a raw Amex export (.csv or .xlsx). Any metadata rows above the real table are skipped automatically. Nothing leaves this machine except the merchant, amount, and (when the file has them) description/address/city fields you explicitly send to OpenAI to categorize.</p>
+  <p class="lede">Pick one or more raw Amex exports (.csv or .xlsx) — selecting several loads and merges them together. Any metadata rows above each file's real table are skipped automatically. Nothing leaves this machine except the merchant, amount, and (when the file has them) description/address/city fields you explicitly send to OpenAI to categorize.</p>
 
   <div class="step">
-    <h2>Load statement</h2>
+    <h2>Load statement(s)</h2>
     <div class="row-flex">
-      <input type="file" id="fileInput" accept=".csv,.xlsx">
+      <input type="file" id="fileInput" accept=".csv,.xlsx" multiple>
     </div>
     <p class="msg" id="loadError"></p>
   </div>
@@ -322,37 +322,107 @@
   }
 
   var HEADER_SCAN_LIMIT = 30; // how many leading rows to search for the real header
+  var OPTIONAL_COLS = ['card', 'description', 'address', 'cityProvince'];
+  var OPTIONAL_HEADER_NAMES = { card: 'Card', description: 'Description', address: 'Address', cityProvince: 'City / Province' };
 
   document.getElementById('fileInput').addEventListener('change', function(e){
-    var file = e.target.files[0];
-    if (!file) return;
-    var isXlsx = /\.xlsx$/i.test(file.name);
-    var reader = new FileReader();
-    reader.onload = function(){
-      if (isXlsx){
-        handleXLSX(reader.result);
-      } else {
-        logFileHash(reader.result);
-        handleTable(parseCSV(reader.result));
-      }
-    };
-    if (isXlsx) reader.readAsArrayBuffer(file);
-    else reader.readAsText(file);
+    var files = Array.from(e.target.files);
+    if (!files.length) return;
+    loadError.textContent = '';
+    Promise.all(files.map(readFileRaw)).then(function(fileResults){
+      mergeAndLoad(fileResults);
+    }).catch(function(err){
+      loadError.textContent = err.message;
+    });
   });
 
-  function handleXLSX(arrayBuffer){
-    logBytesHash(new Uint8Array(arrayBuffer));
-    var workbook;
-    try {
-      workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
-    } catch (e){
-      loadError.textContent = 'Could not read this .xlsx file: ' + e.message;
-      return;
+  // Reads one file to a raw table (array of arrays), CSV or XLSX, and logs
+  // that file's own byte count/hash. No header detection yet — each file
+  // may have its header at a different row, handled in mergeAndLoad.
+  function readFileRaw(file){
+    var isXlsx = /\.xlsx$/i.test(file.name);
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onerror = function(){ reject(new Error('Could not read ' + file.name + '.')); };
+      reader.onload = function(){
+        try {
+          var table;
+          if (isXlsx){
+            logBytesHash(new Uint8Array(reader.result));
+            var workbook = XLSX.read(new Uint8Array(reader.result), { type: 'array', cellDates: false });
+            var sheet = workbook.Sheets[workbook.SheetNames[0]];
+            table = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+            table = table.map(function(row){ return row.map(function(cell){ return String(cell); }); });
+          } else {
+            logFileHash(reader.result);
+            table = parseCSV(reader.result);
+          }
+          resolve({ name: file.name, table: table });
+        } catch (e){
+          reject(new Error('Could not read ' + file.name + ': ' + e.message));
+        }
+      };
+      if (isXlsx) reader.readAsArrayBuffer(file);
+      else reader.readAsText(file);
+    });
+  }
+
+  // Detects each file's own header row and column positions independently,
+  // then merges every file's rows into one table matched by column name.
+  // A column only present in some files is included for all rows, blank
+  // where a given file doesn't have it. No row is ever dropped or
+  // deduplicated; if any file's header can't be found, the whole batch is
+  // stopped and that file is named, same as a single-file load would be.
+  function mergeAndLoad(fileResults){
+    var present = {};
+    var perFile = [];
+    for (var f = 0; f < fileResults.length; f++){
+      var name = fileResults[f].name, table = fileResults[f].table;
+      var headerIdx = findHeaderRow(table);
+      if (headerIdx === -1){
+        loadError.textContent = name + ': could not find a header row with Date, Merchant, and Amount columns in the first ' + HEADER_SCAN_LIMIT + ' rows.';
+        return;
+      }
+      var norm = table[headerIdx].map(function(h){ return h.trim().toLowerCase(); });
+      var cols = {
+        date: norm.indexOf('date'),
+        merchant: norm.indexOf('merchant'),
+        amount: norm.indexOf('amount'),
+        category: norm.indexOf('category')
+      };
+      cols.card = norm.indexOf('card');
+      cols.description = norm.indexOf('description');
+      cols.address = norm.indexOf('address');
+      cols.cityProvince = norm.indexOf('city / province');
+      OPTIONAL_COLS.forEach(function(k){ if (cols[k] !== -1) present[k] = true; });
+
+      var body = table.slice(headerIdx + 1).filter(function(line){
+        return line.some(function(v){ return v.trim() !== ''; });
+      });
+      perFile.push({ name: name, cols: cols, body: body });
     }
-    var sheet = workbook.Sheets[workbook.SheetNames[0]];
-    var table = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
-    table = table.map(function(row){ return row.map(function(cell){ return String(cell); }); });
-    handleTable(table);
+
+    var headerNames = ['Date', 'Merchant', 'Amount', 'Category'];
+    OPTIONAL_COLS.forEach(function(k){ if (present[k]) headerNames.push(OPTIONAL_HEADER_NAMES[k]); });
+
+    var merged = [headerNames];
+    perFile.forEach(function(pf){
+      pf.body.forEach(function(line){
+        var row = [
+          line[pf.cols.date] || '',
+          line[pf.cols.merchant] || '',
+          line[pf.cols.amount] || '',
+          pf.cols.category === -1 ? '' : (line[pf.cols.category] || '')
+        ];
+        OPTIONAL_COLS.forEach(function(k){
+          if (!present[k]) return;
+          row.push(pf.cols[k] === -1 ? '' : (line[pf.cols[k]] || ''));
+        });
+        merged.push(row);
+      });
+    });
+
+    handleTable(merged);
   }
 
   // Scans the first HEADER_SCAN_LIMIT rows for the one that actually
