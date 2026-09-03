@@ -130,6 +130,15 @@
   tbody tr.over{background:#F5E7E3}
   tfoot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none}
   .tablewrap{overflow-x:auto}
+  @media print{
+    /* Printing can't scroll: let wide tables and the chart shrink to fit
+       the page instead of being clipped at the right edge. */
+    .tablewrap{overflow:visible}
+    table{font-size:8px}
+    th,td{padding:3px 4px}
+    #chart svg{width:100% !important}
+    .step{break-inside:avoid}
+  }
   .neg{color:var(--dim)}
   .over-amt{color:var(--red);font-weight:700}
   .worst{
@@ -215,7 +224,7 @@
 
     <div class="step">
       <h2>Monthly spend</h2>
-      <div id="chart"></div>
+      <div class="tablewrap" id="chart"></div>
       <div id="unclearWarnings"></div>
     </div>
 
@@ -865,10 +874,19 @@
   function renderChart(months, byMonth, ceiling){
     var chart = document.getElementById('chart');
     if (!months.length){ chart.innerHTML = ''; return; }
-    var w = 820, h = 260, padL = 60, padB = 30, padT = 28, padR = 16;
-    var innerW = w - padL - padR, innerH = h - padT - padB;
+
+    // Each bar gets a fixed minimum width regardless of how many months
+    // there are, and the chart itself scrolls horizontally — squeezing
+    // 30+ months into one fixed-width box is what made bars, values, and
+    // month labels collide into unreadable overlap.
+    var manyMonths = months.length > 12;
     var barGap = 10;
-    var barW = Math.max(8, innerW / months.length - barGap);
+    var barW = 30;
+    var barUnit = barW + barGap;
+    var padL = 60, padB = manyMonths ? 56 : 30, padT = 28, padR = 16;
+    var innerW = months.length * barUnit;
+    var w = Math.max(760, padL + innerW + padR);
+    var h = 260, innerH = h - padT - padB;
 
     var maxVal = Math.max(ceiling, 0.01, Math.max.apply(null, months.map(function(m){ return byMonth[m].total; })));
     var minVal = Math.min(0, Math.min.apply(null, months.map(function(m){ return byMonth[m].total; })));
@@ -877,7 +895,7 @@
 
     function yFor(v){ return padT + innerH * ((maxVal - v) / range); }
 
-    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%;height:auto" role="img" aria-label="Monthly spend chart">';
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:' + w + 'px;height:auto;display:block" role="img" aria-label="Monthly spend chart">';
     svg += '<line x1="' + padL + '" y1="' + zeroY + '" x2="' + (w-padR) + '" y2="' + zeroY + '" stroke="var(--rule)" stroke-width="1"/>';
     var ceilY = yFor(ceiling);
     svg += '<line x1="' + padL + '" y1="' + ceilY + '" x2="' + (w-padR) + '" y2="' + ceilY + '" stroke="var(--red)" stroke-width="1.5" stroke-dasharray="4 3"/>';
@@ -885,16 +903,29 @@
 
     months.forEach(function(m, i){
       var val = byMonth[m].total;
-      var x = padL + i * (barW + barGap);
+      var x = padL + i * barUnit;
       var yTop = yFor(Math.max(val, 0));
       var yBot = yFor(Math.min(val, 0));
       var barH = Math.max(1, yBot - yTop);
       var over = val > ceiling;
       var fill = val < 0 ? 'var(--dim)' : (over ? 'var(--red)' : 'var(--green)');
-      svg += '<rect x="' + x + '" y="' + yTop + '" width="' + barW + '" height="' + barH + '" fill="' + fill + '"/>';
-      svg += '<text x="' + (x + barW/2) + '" y="' + (h - padB + 14) + '" font-size="10" fill="var(--dim)" text-anchor="middle">' + monthLabel(m) + '</text>';
-      var labelY = val >= 0 ? (yTop - 4) : Math.min(yBot + 12, h - padB - 4);
-      svg += '<text x="' + (x + barW/2) + '" y="' + labelY + '" font-size="10" fill="var(--ink)" text-anchor="middle">' + money(val) + '</text>';
+      var cx = x + barW / 2;
+      svg += '<rect x="' + x + '" y="' + yTop + '" width="' + barW + '" height="' + barH + '" fill="' + fill + '"><title>' +
+        monthLabel(m) + ': ' + money(val) + '</title></rect>';
+
+      if (manyMonths){
+        svg += '<text x="' + cx + '" y="' + (h - padB + 14) + '" font-size="9" fill="var(--dim)" ' +
+          'text-anchor="end" transform="rotate(-45 ' + cx + ' ' + (h - padB + 14) + ')">' + monthLabel(m) + '</text>';
+      } else {
+        svg += '<text x="' + cx + '" y="' + (h - padB + 14) + '" font-size="10" fill="var(--dim)" text-anchor="middle">' + monthLabel(m) + '</text>';
+      }
+
+      // Per-bar dollar labels get unreadable once there are many months;
+      // show them only for the months that matter (over the ceiling) then.
+      if (!manyMonths || over){
+        var labelY = val >= 0 ? (yTop - 4) : Math.min(yBot + 12, h - padB - 4);
+        svg += '<text x="' + cx + '" y="' + labelY + '" font-size="10" fill="var(--ink)" text-anchor="middle">' + money(val) + '</text>';
+      }
     });
     svg += '</svg>';
     chart.innerHTML = svg;
