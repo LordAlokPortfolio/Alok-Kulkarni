@@ -158,14 +158,17 @@ This tool touches financial data, so it checks itself at every step:
 - The browser console logs the loaded file's byte count and SHA-256 hash
   on every load, as a reference if the read ever needs to be proven.
 
-## `an-ledger/multi-card.html`: household dashboard
+### Multi-card and multi-person households
 
-For household multi-card tracking, use `multi-card.html`. Same layout,
-guardrails, and categorizing as `index.html`, plus two extra columns —
-`Card` (which card the transaction came off) and `Person` (who spent it)
-— and three filters above the chart: Person, Card, and a View selector
-for Total household / Split by person / Split by card. Filters change
-only what is displayed; the download always writes every original row.
+The same dashboard covers a whole household, with no second file to
+maintain. If the loaded data carries a `Card` column (which card the
+transaction came off) or a `Person` column (who spent it), a filter for
+each appears on its own, along with a View selector for Total household
+/ Split by person / Split by card, drawing one bar per card or person.
+With a single card and no `Person` column none of those controls appear
+at all, and the page behaves as a plain one-card dashboard. Filters
+change only what is displayed; the download always writes every original
+row.
 
 ## `an-ledger/spend-clarity/`: standalone variance component
 

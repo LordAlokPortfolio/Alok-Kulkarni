@@ -14,6 +14,16 @@
     --dim:#5E6D6A;
     --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
     --sans:ui-sans-serif,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+    /* Categorical series slots, assigned in fixed order and never cycled.
+       Validated against this page's paper surface for colourblind separation. */
+    --series-1:#2a78d6;
+    --series-2:#eb6834;
+    --series-3:#1baf7a;
+    --series-4:#eda100;
+    --series-5:#e87ba4;
+    --series-6:#008300;
+    --series-7:#4a3aa7;
+    --series-8:#e34948;
   }
   *{box-sizing:border-box}
   body{margin:0}
@@ -130,6 +140,17 @@
   tbody tr.over{background:#F5E7E3}
   tfoot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none}
   .tablewrap{overflow-x:auto}
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    font-family:var(--sans);
+    font-size:11px;
+    color:var(--dim);
+    margin-top:8px;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
   @media print{
     /* Printing can't scroll: let wide tables and the chart shrink to fit
        the page instead of being clipped at the right edge. */
@@ -169,7 +190,7 @@
 <div class="wrap">
   <p class="kicker">A&amp;N Ledger</p>
   <h1>Spending dashboard</h1>
-  <p class="lede">Pick one or more raw Amex exports (.csv or .xlsx) — selecting several loads and merges them together. Any metadata rows above each file's real table are skipped automatically. Nothing leaves this machine except the merchant, amount, and (when the file has them) description/address/city fields you explicitly send to OpenAI to categorize.</p>
+  <p class="lede">Pick one or more raw exports (.csv or .xlsx) — selecting several loads and merges them together. Any metadata rows above each file's real table are skipped automatically. If the file happens to carry <code>Card</code> or <code>Person</code> columns, filters for them appear on their own; with a single card it behaves as a plain one-card dashboard. Nothing leaves this machine except the merchant, amount, and (when the file has them) description/address/city fields you explicitly send to OpenAI to categorize.</p>
 
   <div class="step">
     <h2>Load statement(s)</h2>
@@ -209,22 +230,36 @@
 
   <div id="dashboard">
     <div class="step">
-      <h2>Ceiling</h2>
+      <h2 id="ceilingHeading">Ceiling</h2>
       <div class="row-flex">
         <div>
           <label for="ceiling">Monthly spend ceiling (CAD)</label>
           <input type="number" id="ceiling" step="0.01">
         </div>
+        <div id="personFilterWrap" style="display:none">
+          <label for="personFilter">Person</label>
+          <select id="personFilter"></select>
+        </div>
         <div id="cardFilterWrap" style="display:none">
           <label for="cardFilter">Card</label>
           <select id="cardFilter"></select>
         </div>
+        <div>
+          <label for="viewMode">View</label>
+          <select id="viewMode">
+            <option value="total">Total household</option>
+            <option value="person">Split by person</option>
+            <option value="card">Split by card</option>
+          </select>
+        </div>
       </div>
+      <p class="note" id="filterNote" style="display:none">Filters change what you see, never what you download — the CSV always writes every original row.</p>
     </div>
 
     <div class="step">
       <h2>Monthly spend</h2>
       <div class="tablewrap" id="chart"></div>
+      <div class="legend" id="chartLegend"></div>
       <div id="unclearWarnings"></div>
     </div>
 
@@ -244,6 +279,11 @@
   var SPEND_CATEGORIES = CATEGORIES.filter(function(c){ return c !== 'Payment'; });
   var CEIL_KEY = 'anledger-ceiling';
   var API_KEY_KEY = 'anledger-openai-key';
+  // Categorical series slots, used in fixed order and never cycled. A 9th
+  // series folds into "Other" rather than inventing a colour.
+  var SERIES_COLORS = ['var(--series-1)','var(--series-2)','var(--series-3)','var(--series-4)',
+                       'var(--series-5)','var(--series-6)','var(--series-7)','var(--series-8)'];
+  var MAX_SERIES = SERIES_COLORS.length;
 
   var rows = []; // derived, rebuilt from dataRows on every parse/categorize: {date, month, merchant, amount, category, card, line}
   var headerRow = null;   // original header cells, exact text, original order
@@ -273,6 +313,12 @@
   var ceilingInput = document.getElementById('ceiling');
   var cardFilterWrap = document.getElementById('cardFilterWrap');
   var cardFilter = document.getElementById('cardFilter');
+  var personFilterWrap = document.getElementById('personFilterWrap');
+  var personFilter = document.getElementById('personFilter');
+  var viewMode = document.getElementById('viewMode');
+  var chartLegend = document.getElementById('chartLegend');
+  var ceilingHeading = document.getElementById('ceilingHeading');
+  var filterNote = document.getElementById('filterNote');
   var apiKeyInput = document.getElementById('apiKey');
 
   apiKeyInput.value = localStorage.getItem(API_KEY_KEY) || '';
@@ -285,6 +331,8 @@
     renderDashboard();
   });
   cardFilter.addEventListener('change', renderDashboard);
+  personFilter.addEventListener('change', renderDashboard);
+  viewMode.addEventListener('change', renderDashboard);
 
   function parseCSV(text){
     var rows = [], row = [], field = '', inQuotes = false;
@@ -351,8 +399,8 @@
   }
 
   var HEADER_SCAN_LIMIT = 30; // how many leading rows to search for the real header
-  var OPTIONAL_COLS = ['card', 'description', 'address', 'cityProvince'];
-  var OPTIONAL_HEADER_NAMES = { card: 'Card', description: 'Description', address: 'Address', cityProvince: 'City / Province' };
+  var OPTIONAL_COLS = ['card', 'person', 'description', 'address', 'cityProvince'];
+  var OPTIONAL_HEADER_NAMES = { card: 'Card', person: 'Person', description: 'Description', address: 'Address', cityProvince: 'City / Province' };
 
   document.getElementById('fileInput').addEventListener('change', function(e){
     var files = Array.from(e.target.files);
@@ -420,6 +468,7 @@
         category: norm.indexOf('category')
       };
       cols.card = norm.indexOf('card');
+      cols.person = norm.indexOf('person');
       cols.description = norm.indexOf('description');
       cols.address = norm.indexOf('address');
       cols.cityProvince = norm.indexOf('city / province');
@@ -498,6 +547,7 @@
       cols[required[i]] = norm.indexOf(required[i]);
     }
     cols.card = norm.indexOf('card');
+    cols.person = norm.indexOf('person');
     cols.category = norm.indexOf('category');
     // Optional extra context for categorizing, only used if the file has it.
     cols.description = norm.indexOf('description');
@@ -567,6 +617,7 @@
         amount: parseAmount(line[idx.amount] || ''),
         category: (line[idx.category] || '').trim(),
         card: idx.card === -1 ? 'Amex' : ((line[idx.card] || '').trim() || 'Amex'),
+        person: idx.person === -1 ? 'Unassigned' : ((line[idx.person] || '').trim() || 'Unassigned'),
         description: idx.description === -1 ? '' : (line[idx.description] || '').trim(),
         address: idx.address === -1 ? '' : (line[idx.address] || '').trim(),
         cityProvince: idx.cityProvince === -1 ? '' : (line[idx.cityProvince] || '').trim(),
@@ -575,16 +626,54 @@
     });
   }
 
+  // Rebuilds the Person and Card dropdowns from whatever is in the file,
+  // preserving the current selection when that value still exists.
   function buildCardFilter(){
-    var cards = Array.from(new Set(rows.map(function(r){ return r.card; })));
-    if (cards.length > 1){
-      cardFilterWrap.style.display = 'block';
-      cardFilter.innerHTML = '<option value="">All cards</option>' +
-        cards.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
-    } else {
-      cardFilterWrap.style.display = 'none';
-      cardFilter.innerHTML = '';
+    var hasCards = fillFilter(cardFilter, cardFilterWrap, 'card', 'All cards');
+    var hasPeople = fillFilter(personFilter, personFilterWrap, 'person', 'All people');
+    buildViewOptions(hasCards, hasPeople);
+  }
+
+  // A split view is only offered when the file actually has something to
+  // split by. With one card and no Person column this leaves a single
+  // option, so the page reads as a plain one-card dashboard.
+  function buildViewOptions(hasCards, hasPeople){
+    var options = [{ value: 'total', label: 'Total household' }];
+    if (hasPeople) options.push({ value: 'person', label: 'Split by person' });
+    if (hasCards) options.push({ value: 'card', label: 'Split by card' });
+
+    var previous = viewMode.value;
+    viewMode.innerHTML = options.map(function(o){
+      return '<option value="' + o.value + '">' + o.label + '</option>';
+    }).join('');
+    var stillValid = options.some(function(o){ return o.value === previous; });
+    viewMode.value = stillValid ? previous : 'total';
+    // Nothing to choose between: hide the control rather than show one option.
+    viewMode.parentNode.style.display = options.length > 1 ? 'block' : 'none';
+
+    // With a single card and no Person column there is nothing to filter,
+    // so the section is just the ceiling and says so.
+    var anyFilters = hasCards || hasPeople;
+    ceilingHeading.textContent = anyFilters ? 'Ceiling & filters' : 'Ceiling';
+    filterNote.style.display = anyFilters ? 'block' : 'none';
+  }
+
+  // Returns whether this field has more than one distinct value, i.e.
+  // whether it is worth filtering or splitting by at all.
+  function fillFilter(select, wrap, field, allLabel){
+    var values = Array.from(new Set(rows.map(function(r){ return r[field]; }))).sort();
+    if (values.length > 1){
+      var previous = select.value;
+      wrap.style.display = 'block';
+      select.innerHTML = '<option value="">' + allLabel + '</option>' +
+        values.map(function(v){ return '<option value="' + v + '">' + v + '</option>'; }).join('');
+      if (values.indexOf(previous) !== -1) select.value = previous;
+      return true;
     }
+    wrap.style.display = 'none';
+    select.innerHTML = '';
+    select.value = '';
+    return false;
   }
 
   catBtn.addEventListener('click', function(){ categorizeRows(); });
@@ -847,7 +936,10 @@
 
   function filteredRows(){
     var card = cardFilter.value;
-    return rows.filter(function(r){ return !card || r.card === card; });
+    var person = personFilter.value;
+    return rows.filter(function(r){
+      return (!card || r.card === card) && (!person || r.person === person);
+    });
   }
 
   function renderDashboard(){
@@ -856,7 +948,7 @@
 
     var months = Array.from(new Set(spend.map(function(r){ return r.month; }))).sort();
     var byMonth = {};
-    months.forEach(function(m){ byMonth[m] = { total: 0, cats: {}, unclear: 0 }; });
+    months.forEach(function(m){ byMonth[m] = { total: 0, cats: {}, unclear: 0, series: {} }; });
     spend.forEach(function(r){
       var m = byMonth[r.month];
       m.total += r.amount;
@@ -864,32 +956,82 @@
       if (r.category === 'UNCLEAR') m.unclear += r.amount;
     });
 
+    // Series breakdown for the split views. "Total household" is a single
+    // series so the same rendering path covers all three view modes.
+    var mode = viewMode.value;
+    var seriesField = mode === 'person' ? 'person' : (mode === 'card' ? 'card' : null);
+    var seriesNames = ['Total'];
+    if (seriesField){
+      seriesNames = Array.from(new Set(spend.map(function(r){ return r[seriesField]; }))).sort();
+      // A 9th series folds into "Other" rather than inventing a colour.
+      if (seriesNames.length > MAX_SERIES){
+        var kept = seriesNames.slice(0, MAX_SERIES - 1);
+        seriesNames = kept.concat(['Other']);
+      }
+    }
+    months.forEach(function(m){
+      seriesNames.forEach(function(s){ byMonth[m].series[s] = 0; });
+    });
+    spend.forEach(function(r){
+      var name = 'Total';
+      if (seriesField){
+        name = r[seriesField];
+        if (seriesNames.indexOf(name) === -1) name = 'Other';
+      }
+      byMonth[r.month].series[name] += r.amount;
+    });
+
     var ceiling = parseFloat(ceilingInput.value) || 0;
-    renderChart(months, byMonth, ceiling);
+    renderChart(months, byMonth, ceiling, seriesNames, !!seriesField);
+    renderLegend(seriesNames, !!seriesField);
     renderUnclearWarnings(months, byMonth);
     renderTable(months, byMonth, ceiling);
     renderWorstMonth(months, byMonth, ceiling);
   }
 
-  function renderChart(months, byMonth, ceiling){
+  function renderLegend(seriesNames, isSplit){
+    if (!isSplit){
+      chartLegend.innerHTML = '';
+      return;
+    }
+    chartLegend.innerHTML = seriesNames.map(function(s, i){
+      return '<span><i style="background:' + SERIES_COLORS[i % MAX_SERIES] + '"></i>' + s + '</span>';
+    }).join('');
+  }
+
+  function renderChart(months, byMonth, ceiling, seriesNames, isSplit){
     var chart = document.getElementById('chart');
     if (!months.length){ chart.innerHTML = ''; return; }
 
-    // Each bar gets a fixed minimum width regardless of how many months
-    // there are, and the chart itself scrolls horizontally — squeezing
-    // 30+ months into one fixed-width box is what made bars, values, and
-    // month labels collide into unreadable overlap.
+    // Each bar gets a fixed width regardless of how many months there are,
+    // and the chart scrolls horizontally — squeezing 30+ months into one
+    // fixed-width box makes bars, values and month labels collide.
+    // In a split view each month holds one bar per series, side by side.
     var manyMonths = months.length > 12;
-    var barGap = 10;
-    var barW = 30;
-    var barUnit = barW + barGap;
-    var padL = 60, padB = manyMonths ? 56 : 30, padT = 28, padR = 16;
-    var innerW = months.length * barUnit;
-    var w = Math.max(760, padL + innerW + padR);
+    var seriesCount = isSplit ? seriesNames.length : 1;
+    var seriesBarW = isSplit ? Math.max(6, Math.round(30 / Math.min(seriesCount, 4))) : 30;
+    var seriesGap = isSplit ? 2 : 0; // 2px surface gap between adjacent fills
+    var groupW = seriesCount * seriesBarW + (seriesCount - 1) * seriesGap;
+    var groupGap = 12;
+    var groupUnit = groupW + groupGap;
+    // Rotate month labels whenever a group is narrower than the label needs,
+    // not just when there are many months — a two-series split view packs
+    // months close together even when there are only a handful of them.
+    var rotateLabels = manyMonths || groupUnit < 56;
+    var padL = 60, padB = rotateLabels ? 56 : 30, padT = 28, padR = 16;
+    var w = Math.max(760, padL + months.length * groupUnit + padR);
     var h = 260, innerH = h - padT - padB;
 
-    var maxVal = Math.max(ceiling, 0.01, Math.max.apply(null, months.map(function(m){ return byMonth[m].total; })));
-    var minVal = Math.min(0, Math.min.apply(null, months.map(function(m){ return byMonth[m].total; })));
+    function seriesValues(m){
+      return isSplit
+        ? seriesNames.map(function(s){ return byMonth[m].series[s] || 0; })
+        : [byMonth[m].total];
+    }
+
+    var allValues = [];
+    months.forEach(function(m){ allValues = allValues.concat(seriesValues(m)); });
+    var maxVal = Math.max(ceiling, 0.01, Math.max.apply(null, allValues));
+    var minVal = Math.min(0, Math.min.apply(null, allValues));
     var range = maxVal - minVal;
     var zeroY = padT + innerH * (maxVal / range);
 
@@ -902,29 +1044,41 @@
     svg += '<text x="' + padL + '" y="14" font-size="10" fill="var(--red)" text-anchor="start">ceiling ' + money(ceiling) + '</text>';
 
     months.forEach(function(m, i){
-      var val = byMonth[m].total;
-      var x = padL + i * barUnit;
-      var yTop = yFor(Math.max(val, 0));
-      var yBot = yFor(Math.min(val, 0));
-      var barH = Math.max(1, yBot - yTop);
-      var over = val > ceiling;
-      var fill = val < 0 ? 'var(--dim)' : (over ? 'var(--red)' : 'var(--green)');
-      var cx = x + barW / 2;
-      svg += '<rect x="' + x + '" y="' + yTop + '" width="' + barW + '" height="' + barH + '" fill="' + fill + '"><title>' +
-        monthLabel(m) + ': ' + money(val) + '</title></rect>';
+      var groupX = padL + i * groupUnit;
+      var groupCx = groupX + groupW / 2;
+      var values = seriesValues(m);
+      var monthTotal = byMonth[m].total;
+      var over = monthTotal > ceiling;
 
-      if (manyMonths){
-        svg += '<text x="' + cx + '" y="' + (h - padB + 14) + '" font-size="9" fill="var(--dim)" ' +
-          'text-anchor="end" transform="rotate(-45 ' + cx + ' ' + (h - padB + 14) + ')">' + monthLabel(m) + '</text>';
+      values.forEach(function(val, s){
+        var x = groupX + s * (seriesBarW + seriesGap);
+        var yTop = yFor(Math.max(val, 0));
+        var yBot = yFor(Math.min(val, 0));
+        var barH = Math.max(1, yBot - yTop);
+        // In a split view colour carries series identity (legend below);
+        // in the total view it carries over/under the ceiling.
+        var fill = isSplit
+          ? SERIES_COLORS[s % MAX_SERIES]
+          : (val < 0 ? 'var(--dim)' : (over ? 'var(--red)' : 'var(--green)'));
+        svg += '<rect x="' + x + '" y="' + yTop + '" width="' + seriesBarW + '" height="' + barH + '" fill="' + fill + '"><title>' +
+          monthLabel(m) + (isSplit ? ' · ' + seriesNames[s] : '') + ': ' + money(val) + '</title></rect>';
+      });
+
+      if (rotateLabels){
+        svg += '<text x="' + groupCx + '" y="' + (h - padB + 14) + '" font-size="9" fill="var(--dim)" ' +
+          'text-anchor="end" transform="rotate(-45 ' + groupCx + ' ' + (h - padB + 14) + ')">' + monthLabel(m) + '</text>';
       } else {
-        svg += '<text x="' + cx + '" y="' + (h - padB + 14) + '" font-size="10" fill="var(--dim)" text-anchor="middle">' + monthLabel(m) + '</text>';
+        svg += '<text x="' + groupCx + '" y="' + (h - padB + 14) + '" font-size="10" fill="var(--dim)" text-anchor="middle">' + monthLabel(m) + '</text>';
       }
 
-      // Per-bar dollar labels get unreadable once there are many months;
-      // show them only for the months that matter (over the ceiling) then.
-      if (!manyMonths || over){
-        var labelY = val >= 0 ? (yTop - 4) : Math.min(yBot + 12, h - padB - 4);
-        svg += '<text x="' + cx + '" y="' + labelY + '" font-size="10" fill="var(--ink)" text-anchor="middle">' + money(val) + '</text>';
+      // Selective direct labels: a number on every bar is unreadable at this
+      // density, so label the month total only where it clears the ceiling
+      // (or when there are few enough months for all of them to fit).
+      if (!isSplit && (!manyMonths || over)){
+        var labelY = monthTotal >= 0 ? (yFor(Math.max(monthTotal, 0)) - 4) : Math.min(yFor(Math.min(monthTotal, 0)) + 12, h - padB - 4);
+        svg += '<text x="' + groupCx + '" y="' + labelY + '" font-size="10" fill="var(--ink)" text-anchor="middle">' + money(monthTotal) + '</text>';
+      } else if (isSplit && over){
+        svg += '<text x="' + groupCx + '" y="' + (yFor(Math.max.apply(null, values)) - 4) + '" font-size="9" fill="var(--red)" text-anchor="middle">' + money(monthTotal) + ' total</text>';
       }
     });
     svg += '</svg>';
