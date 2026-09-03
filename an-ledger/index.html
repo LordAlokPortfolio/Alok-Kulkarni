@@ -457,7 +457,7 @@
       var name = fileResults[f].name, table = fileResults[f].table;
       var headerIdx = findHeaderRow(table);
       if (headerIdx === -1){
-        loadError.textContent = name + ': could not find a header row with Date, Merchant, and Amount columns in the first ' + HEADER_SCAN_LIMIT + ' rows.';
+        loadError.textContent = name + ': ' + missingColumnsMessage(table);
         return;
       }
       var norm = table[headerIdx].map(function(h){ return h.trim().toLowerCase(); });
@@ -517,6 +517,26 @@
     return -1;
   }
 
+  // Used only once findHeaderRow has already failed, to say which required
+  // column(s) are actually missing rather than restating all three. Picks
+  // the row (within the scan limit) that comes closest to having Date,
+  // Merchant and Amount, and names whichever of those it still lacks.
+  function missingColumnsMessage(table){
+    var required = ['date', 'merchant', 'amount'];
+    var names = { date: 'Date', merchant: 'Merchant', amount: 'Amount' };
+    var limit = Math.min(table.length, HEADER_SCAN_LIMIT);
+    var best = null;
+    for (var i = 0; i < limit; i++){
+      var norm = table[i].map(function(h){ return h.trim().toLowerCase(); });
+      var missing = required.filter(function(r){ return norm.indexOf(r) === -1; });
+      if (!best || missing.length < best.length) best = missing;
+      if (!best.length) break;
+    }
+    if (!best) best = required; // no rows at all within the scan limit
+    var label = best.length === 1 ? 'Missing column: ' : 'Missing columns: ';
+    return label + best.map(function(k){ return names[k]; }).join(', ');
+  }
+
   function handleTable(table){
     loadError.textContent = '';
     catStep.style.display = 'none';
@@ -534,7 +554,7 @@
 
     var headerIdx = findHeaderRow(table);
     if (headerIdx === -1){
-      loadError.textContent = 'Could not find a header row with Date, Merchant, and Amount columns in the first ' + HEADER_SCAN_LIMIT + ' rows.';
+      loadError.textContent = missingColumnsMessage(table);
       return;
     }
 
@@ -825,7 +845,7 @@
   // without waiting on another API call. Only ever writes into a row's
   // own Category cell, same as the AI path, and only for rows chosen here.
   function renderManualCategorize(){
-    var blank = rows.filter(function(r){ return !r.category; });
+    var blank = rows.filter(function(r){ return !r.category || r.category === 'UNCLEAR'; });
     if (!blank.length){
       manualCatWrap.style.display = 'none';
       manualCatTable.innerHTML = '';
@@ -850,8 +870,10 @@
       var val = sel.value;
       if (!val) return;
       var line = parseInt(sel.getAttribute('data-line'), 10);
-      // Only ever writes a row that is still blank right now, same guarantee as the AI path.
-      if (!(dataRows[line][idx.category] || '').trim()){
+      // Only ever writes a row that is still blank or UNCLEAR right now —
+      // never a row that already holds a real category.
+      var current = (dataRows[line][idx.category] || '').trim();
+      if (!current || current === 'UNCLEAR'){
         dataRows[line][idx.category] = val;
         updated++;
       }

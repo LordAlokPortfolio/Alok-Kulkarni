@@ -36,13 +36,24 @@ spent it." It also does no forecasting, no recurring-charge detection,
 and no year-over-year comparison. It shows exactly what's in the CSV and
 nothing more.
 
+## Getting started
+
+Clone this branch:
+
+```
+git clone --branch alok-idea-an-ledger --single-branch https://github.com/LordAlokPortfolio/Alok-Kulkarni.git AN-Ledger
+cd AN-Ledger
+```
+
+Then open `an-ledger/index.html` by double-clicking it.
+
 ## Getting started from a real Amex export
 
 A raw Amex export, `.csv` or `.xlsx`, can be loaded directly. No manual
 cleanup is required:
 
-1. Download the repository (or just the `an-ledger/` folder) and open
-   `an-ledger/index.html` by double-clicking it.
+1. Clone the repository as above and open `an-ledger/index.html` by
+   double-clicking it.
 2. Export transactions from the Amex site, as CSV or Excel.
 3. Load that file into `index.html` via the file picker as-is.
 
