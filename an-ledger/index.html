@@ -501,8 +501,11 @@
     catBtn.disabled = true;
     catBtn.textContent = 'Categorizing…';
 
-    var payload = targets.map(function(r){
-      var row = { merchant: r.merchant, amount: r.amount };
+    // Each row carries its own id so the response can be matched back to
+    // the right row explicitly, not by list position — one hallucinated
+    // extra or duplicate entry then can't misalign every other answer.
+    var payload = targets.map(function(r, i){
+      var row = { id: i, merchant: r.merchant, amount: r.amount };
       if (r.description) row.description = r.description;
       if (r.address) row.address = r.address;
       if (r.cityProvince) row.cityProvince = r.cityProvince;
@@ -511,10 +514,10 @@
     var system = 'You categorize personal credit card transactions into exactly one of these categories: ' +
       CATEGORIES.join(', ') + '. Use every field given for a transaction (merchant, amount, and description/address/' +
       'cityProvince when present) together to identify the actual place and pick the single best category. ' +
-      'If you are not confident, answer UNCLEAR. Never invent a category outside this list. Return exactly one ' +
-      'category per transaction, in the same order given, with no extra or missing entries.';
-    var user = 'Return a JSON object of the form {"categories": [...]}, with exactly one category string per ' +
-      'transaction below, in the same order:\n' + JSON.stringify(payload);
+      'If you are not confident, answer UNCLEAR. Never invent a category outside this list.';
+    var user = 'Return a JSON object of the form {"categories": [{"id": <id>, "category": "<category>"}, ...]}, ' +
+      'with exactly one entry per transaction below, each entry\'s "id" copied exactly from that transaction\'s ' +
+      '"id" field. Do not add, skip, or duplicate any id:\n' + JSON.stringify(payload);
 
     fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -542,27 +545,46 @@
       if (!Array.isArray(list)){
         throw new Error('Model returned an unexpected shape (see console for what came back). File not modified.');
       }
-      if (list.length !== expectedCount){
-        throw new Error('Expected ' + expectedCount + ' categories, got ' + list.length +
-          ' (see console for the exact list OpenAI returned). File not modified — use the table below to fix rows by hand.');
+
+      // Build id -> category from whatever came back, then apply only the
+      // entries whose id matches a row we actually asked about. Extra or
+      // duplicate ids are logged and ignored rather than failing everything;
+      // a row whose id never comes back just stays blank for the table below.
+      var byId = {};
+      var extra = 0;
+      list.forEach(function(entry){
+        if (!entry || typeof entry.id === 'undefined'){ extra++; return; }
+        if (entry.id in byId){ extra++; return; }
+        byId[entry.id] = entry.category;
+      });
+      if (extra){
+        console.warn('A&N Ledger: ' + extra + ' response entr' + (extra === 1 ? 'y' : 'ies') +
+          ' had no usable id or duplicated one already seen; ignored (see the logged response above).');
       }
 
-      // Only the Category cell of each target row is written. Every other
-      // cell, and every row that already had a category, is untouched.
+      var applied = 0;
       targets.forEach(function(r, i){
-        var cat = String(list[i] || '').trim();
+        if (!(i in byId)) return;
+        var cat = String(byId[i] || '').trim();
         if (CATEGORIES.indexOf(cat) === -1){
           console.warn('A&N Ledger: model returned unrecognized category \'' + cat + '\' for row ' + (r.line + 2) + ', treating as UNCLEAR.');
           cat = 'UNCLEAR';
         }
         dataRows[r.line][idx.category] = cat;
+        applied++;
       });
-      categorizedThisSession += targets.length;
+
+      if (!applied){
+        throw new Error('OpenAI\'s response didn\'t match any of the ' + expectedCount +
+          ' rows sent (see console for what came back). File not modified — use the table below to fix rows by hand.');
+      }
+
+      categorizedThisSession += applied;
       rebuildRows();
 
       var remaining = rows.filter(function(r){ return !r.category; }).length;
       catNote.textContent = remaining
-        ? remaining + ' row' + (remaining === 1 ? '' : 's') + ' still uncategorized.'
+        ? applied + ' categorized, ' + remaining + ' row' + (remaining === 1 ? '' : 's') + ' left for you to set by hand below.'
         : 'All rows categorized.';
       catBtn.textContent = remaining ? ('Categorize ' + remaining + ' rows') : 'Categorize rows';
       downloadBtn.style.display = 'inline-block';

@@ -105,8 +105,14 @@ touched. The OpenAI API key is entered in a password field on the page;
 it's stored only in that browser's `localStorage` and is never written to
 a file.
 
-If the API call fails, returns the wrong number of categories, or leaves
-a row `UNCLEAR`, a small table appears listing every still-blank row with
+Each row sent is tagged with an id, and the response is matched back by
+that id, not by list position — so if OpenAI's response has an extra,
+missing, or duplicate entry (a real, fairly common quirk of this kind of
+request), only the rows it couldn't cleanly match stay blank; everything
+it did answer correctly still gets applied, instead of the whole batch
+being thrown out over one bad entry. A row that comes back `UNCLEAR`, or
+that the API couldn't match at all, or a call that fails outright, all
+land in the same place: a small table listing every still-blank row with
 a dropdown to set its category by hand, on the spot, no retry needed —
 that table is always available, even before trying "Categorize rows" at
 all.
@@ -130,10 +136,13 @@ This tool touches financial data, so it checks itself at every step:
   valid before anything renders. The first bad row stops the load and
   names the row, the column, and the bad value.
 - Categorizing never touches any column but `Category`, and never
-  overwrites a row that already has one. If the API returns a different
-  number of categories than were requested, or something outside the
-  fixed category list, nothing is written silently: an error or a logged
-  warning names exactly what happened.
+  overwrites a row that already has one. Each answer is matched back to
+  its row by an explicit id, never by list position, so an API response
+  with an extra or duplicate entry can't silently misalign one row's
+  category onto another; a category outside the fixed list is forced to
+  `UNCLEAR` instead of written as-is. Nothing is ever applied to a row
+  that wasn't explicitly matched, and every such case is logged to the
+  console.
 - Before a download is generated, every row is re-checked against a
   snapshot taken at load time: same row count, same columns, same amounts
   and dates, only `Category` cells allowed to differ. Any mismatch
