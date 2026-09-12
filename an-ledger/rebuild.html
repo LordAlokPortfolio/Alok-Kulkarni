@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Line of credit rebuild</title>
+<title>Gift payback</title>
 <style>
   :root{
     --ink:#16232E;
@@ -21,7 +21,7 @@
     font-family:var(--serif);
     color:var(--ink);
     background:var(--paper);
-    max-width:520px;
+    max-width:640px;
     margin:0 auto;
     padding:26px 20px 40px;
     line-height:1.45;
@@ -44,10 +44,9 @@
     font-size:15px;
     color:var(--dim);
     margin:0 0 26px;
-    max-width:44ch;
+    max-width:58ch;
   }
 
-  /* step one */
   .step{
     border-top:2px solid var(--ink);
     padding-top:14px;
@@ -58,42 +57,6 @@
     font-family:var(--sans);
     font-weight:600;
     margin:0 0 10px;
-  }
-  .clearbtn{
-    width:100%;
-    font-family:var(--sans);
-    font-size:15px;
-    font-weight:600;
-    color:var(--paper);
-    background:var(--red);
-    border:none;
-    border-radius:2px;
-    padding:15px;
-    cursor:pointer;
-  }
-  .clearbtn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
-  .cleared{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    font-size:15px;
-  }
-  .cleared .amt{text-decoration:line-through;color:var(--dim)}
-  .cleared .tag{
-    font-family:var(--sans);
-    font-size:12px;
-    color:var(--green);
-    font-weight:600;
-  }
-  .undo{
-    font-family:var(--sans);
-    font-size:11px;
-    color:var(--dim);
-    background:none;
-    border:none;
-    padding:6px 0 0;
-    cursor:pointer;
-    text-decoration:underline;
   }
 
   /* hero counter */
@@ -109,55 +72,96 @@
     font-family:var(--sans);
     font-size:12px;
     color:var(--dim);
-    margin:6px 0 22px;
+    margin:6px 0 14px;
+  }
+  .progressBar{
+    width:100%;
+    height:10px;
+    background:#fff;
+    border:1px solid var(--rule);
+    border-radius:5px;
+    overflow:hidden;
+    margin-bottom:22px;
+  }
+  .progressBar > div{
+    height:100%;
+    background:var(--green);
+    width:0%;
+    transition:width .2s ease;
   }
 
-  /* ledger */
-  .ledger{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
-  .row{
-    display:grid;
-    grid-template-columns:34px 1fr auto;
-    align-items:center;
-    gap:10px;
-    width:100%;
-    text-align:left;
-    background:none;
+  button{
+    font-family:var(--sans);
+    font-size:13px;
+    font-weight:600;
+    color:var(--paper);
+    background:var(--ink);
     border:none;
-    border-bottom:1px solid var(--rule);
-    padding:11px 2px;
-    font:inherit;
-    color:inherit;
+    border-radius:2px;
+    padding:10px 14px;
     cursor:pointer;
   }
-  .row:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
-  .n{
+  button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+  /* calendar */
+  .month{margin-bottom:22px}
+  .month h3{
     font-family:var(--sans);
-    font-size:11px;
+    font-size:12px;
+    font-weight:600;
     color:var(--dim);
-    font-variant-numeric:tabular-nums;
+    margin:0 0 8px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
   }
-  .when{font-size:15px}
-  .val{
+  .weekgrid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));
+    gap:8px;
+  }
+  .card{
+    border:1px solid var(--rule);
+    background:#fff;
+    border-radius:4px;
+    padding:10px;
+    text-align:left;
+    cursor:pointer;
+    font:inherit;
+    color:inherit;
+  }
+  .card:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+  .card .n{
+    font-family:var(--sans);
+    font-size:10px;
+    color:var(--dim);
+  }
+  .card .d{
     font-size:15px;
+    margin:2px 0;
+  }
+  .card .amt{
+    font-family:var(--sans);
+    font-size:13px;
     font-variant-numeric:tabular-nums;
     color:var(--dim);
   }
-  .row.done .when{color:var(--green)}
-  .row.done .val{color:var(--green);font-weight:600}
-  .row.done .n::after{content:' ✓';color:var(--green)}
-  .row.next{background:#E4EAE7}
-  .row.next .when::after{
+  .card.done{background:#E4EAE7;border-color:var(--green)}
+  .card.done .d{color:var(--green)}
+  .card.done .amt{color:var(--green);font-weight:600}
+  .card.done .n::after{content:' ✓';color:var(--green)}
+  .card.next{border-color:var(--ink);border-width:2px;padding:9px}
+  .card.next .n::after{
     content:' · next';
-    font-family:var(--sans);
-    font-size:11px;
     color:var(--dim);
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .card{transition:background .15s ease}
   }
 
-  /* rules */
   .rules{margin-top:34px;border-top:2px solid var(--ink);padding-top:14px}
   .rules h2{font-size:13px;font-family:var(--sans);font-weight:600;margin:0 0 12px}
   .rules ol{margin:0;padding-left:20px}
-  .rules li{font-size:14px;margin-bottom:9px;max-width:46ch}
+  .rules li{font-size:14px;margin-bottom:9px;max-width:52ch}
   .foot{
     font-family:var(--sans);
     font-size:11px;
@@ -178,60 +182,63 @@
     margin-top:14px;
   }
   .toolfoot a{color:var(--dim)}
-  @media (prefers-reduced-motion:no-preference){
-    .row{transition:background .15s ease}
-  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <p class="kicker">Household plan · started September 2026</p>
-  <h1>The twenty thousand stays twenty thousand.</h1>
-  <p class="lede">Clear the line of credit from savings today, then put it back at $250 a month. No interest, no lender, no rush.</p>
-
-  <div class="step" id="step1">
-    <h2>Step one</h2>
-    <div id="step1body"></div>
-  </div>
+  <h1>The gift goes back, one Friday at a time.</h1>
+  <p class="lede">
+    $3,000 borrowed against the line of credit, paid back weekly every Friday
+    for 6 months. At $166/week that would finish in about 18 weeks — since 6
+    months is the fixed target here, the weekly amount is recalculated to
+    <strong id="perWeekLede">$115.38</strong> instead, landing on the last
+    Friday automatically. Click a card as each payment goes out.
+  </p>
 
   <div class="hero">
     <p class="big" id="restored">$0</p>
-    <p class="sub" id="heroSub">of $5,197.56 put back · 21 months to go</p>
+    <p class="sub" id="heroSub">of $3,000.00 put back</p>
+    <div class="progressBar"><div id="progressFill"></div></div>
+    <button id="icsBtn">Download Friday reminders (.ics)</button>
   </div>
 
-  <ul class="ledger" id="ledger"></ul>
+  <div id="calendar"></div>
 
   <div class="rules">
     <h2>Rules we agreed on</h2>
     <ol>
-      <li>The line of credit is not a source of funds. If something needs paying, it comes from salary or it waits.</li>
-      <li>The $250 is a fixed transfer on payday, treated like rent. Not what is left over at month end.</li>
-      <li>A missed month gets added back at the end, not forgiven.</li>
-      <li>Amex stays on salary and is not folded into this.</li>
+      <li>$115.38 (the last week $115.50) leaves the account every Friday, treated like rent — not what's left over.</li>
+      <li>A missed Friday gets added to the next one, not forgiven.</li>
+      <li>The line of credit is not a source of funds for anything else while this runs.</li>
     </ol>
   </div>
 
-  <p class="foot">Down payment target: $20,000, earmarked for 2027. Tap any month to mark it paid.</p>
+  <p class="foot">Target: $3,000 back by Mar 12, 2027, restoring the $20,000 line of credit. Tap any Friday to mark it paid.</p>
   <p class="msg" id="msg"></p>
   <p class="toolfoot"><a href="index.html">A&amp;N Ledger — spending dashboard</a></p>
 </div>
 
 <script>
 (function(){
-  var TOTAL = 5197.56, STEP = 250, KEY = 'loc-rebuild-v1';
-  var state = { cleared:null, paid:[] };
+  var TOTAL = 3000.00, WEEKS = 26, KEY = 'gift-payback-v1';
+  var state = { paid:[] };
   var msg = document.getElementById('msg');
 
+  var PER = Math.round((TOTAL / WEEKS) * 100) / 100;
+  var LAST = Math.round((TOTAL - PER * (WEEKS - 1)) * 100) / 100;
+
   var schedule = (function(){
-    var rows = [], left = TOTAL, d = new Date(2026, 9, 1); // Oct 2026
-    while (left > 0.005){
-      var amt = Math.min(STEP, left);
-      left = Math.round((left - amt) * 100) / 100;
+    var rows = [];
+    var d = new Date(2026, 8, 12); // today, 2026-09-12
+    // advance to the first Friday on/after today
+    d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7));
+    for (var i = 0; i < WEEKS; i++){
       rows.push({
-        label: d.toLocaleDateString('en-CA', { month:'long', year:'numeric' }),
-        amount: amt
+        date: new Date(d),
+        amount: i === WEEKS - 1 ? LAST : PER
       });
-      d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      d.setDate(d.getDate() + 7);
     }
     return rows;
   })();
@@ -250,69 +257,92 @@
       var v = localStorage.getItem(KEY);
       if (v) state = JSON.parse(v);
     } catch(e){ /* first run, nothing saved yet */ }
+    document.getElementById('perWeekLede').textContent = money(PER);
     render();
   }
 
   function render(){
-    // step one
-    var box = document.getElementById('step1body');
-    box.innerHTML = '';
-    if (!state.cleared){
-      var b = document.createElement('button');
-      b.className = 'clearbtn';
-      b.textContent = 'Mark ' + money(TOTAL) + ' paid to the line of credit';
-      b.onclick = function(){
-        state.cleared = new Date().toLocaleDateString('en-CA', { month:'long', day:'numeric', year:'numeric' });
-        save(); render();
-      };
-      box.appendChild(b);
-    } else {
-      box.innerHTML =
-        '<div class="cleared"><span class="amt">' + money(TOTAL) + '</span>' +
-        '<span class="tag">Cleared ' + state.cleared + '</span></div>';
-      var u = document.createElement('button');
-      u.className = 'undo';
-      u.textContent = 'Undo';
-      u.onclick = function(){ state.cleared = null; save(); render(); };
-      box.appendChild(u);
-    }
-
-    // ledger
-    var list = document.getElementById('ledger');
-    list.innerHTML = '';
     var nextIdx = -1;
     for (var i = 0; i < schedule.length; i++){
       if (state.paid.indexOf(i) === -1){ nextIdx = i; break; }
     }
 
+    var cal = document.getElementById('calendar');
+    cal.innerHTML = '';
+    var byMonth = [];
     schedule.forEach(function(row, i){
-      var done = state.paid.indexOf(i) !== -1;
-      var li = document.createElement('li');
-      var btn = document.createElement('button');
-      btn.className = 'row' + (done ? ' done' : '') + (i === nextIdx && state.cleared ? ' next' : '');
-      btn.setAttribute('aria-pressed', done ? 'true' : 'false');
-      btn.innerHTML =
-        '<span class="n">' + (i + 1) + '</span>' +
-        '<span class="when">' + row.label + '</span>' +
-        '<span class="val">' + money(row.amount) + '</span>';
-      btn.onclick = function(){
-        var at = state.paid.indexOf(i);
-        if (at === -1) state.paid.push(i); else state.paid.splice(at, 1);
-        save(); render();
-      };
-      li.appendChild(btn);
-      list.appendChild(li);
+      var key = row.date.getFullYear() + '-' + row.date.getMonth();
+      var group = byMonth.length && byMonth[byMonth.length - 1].key === key
+        ? byMonth[byMonth.length - 1]
+        : (byMonth.push({ key: key, label: row.date.toLocaleDateString('en-CA', { month:'long', year:'numeric' }), rows: [] }), byMonth[byMonth.length - 1]);
+      group.rows.push({ row: row, i: i });
     });
 
-    // hero
+    byMonth.forEach(function(group){
+      var monthDiv = document.createElement('div');
+      monthDiv.className = 'month';
+      var h3 = document.createElement('h3');
+      h3.textContent = group.label;
+      monthDiv.appendChild(h3);
+      var grid = document.createElement('div');
+      grid.className = 'weekgrid';
+      group.rows.forEach(function(entry){
+        var i = entry.i, row = entry.row;
+        var done = state.paid.indexOf(i) !== -1;
+        var btn = document.createElement('button');
+        btn.className = 'card' + (done ? ' done' : '') + (i === nextIdx ? ' next' : '');
+        btn.setAttribute('aria-pressed', done ? 'true' : 'false');
+        btn.innerHTML =
+          '<span class="n">Week ' + (i + 1) + '</span>' +
+          '<div class="d">' + row.date.toLocaleDateString('en-CA', { month:'short', day:'numeric' }) + '</div>' +
+          '<span class="amt">' + money(row.amount) + '</span>';
+        btn.onclick = function(){
+          var at = state.paid.indexOf(i);
+          if (at === -1) state.paid.push(i); else state.paid.splice(at, 1);
+          save(); render();
+        };
+        grid.appendChild(btn);
+      });
+      monthDiv.appendChild(grid);
+      cal.appendChild(monthDiv);
+    });
+
     var restored = state.paid.reduce(function(s, i){ return s + schedule[i].amount; }, 0);
     restored = Math.round(restored * 100) / 100;
-    var monthsLeft = schedule.length - state.paid.length;
+    var weeksLeft = schedule.length - state.paid.length;
     document.getElementById('restored').textContent = money(restored);
+    document.getElementById('progressFill').style.width = Math.min(100, (restored / TOTAL) * 100) + '%';
     document.getElementById('heroSub').textContent = restored >= TOTAL - 0.005
-      ? 'Back to $20,000. Done.'
-      : 'of ' + money(TOTAL) + ' put back · ' + monthsLeft + ' month' + (monthsLeft === 1 ? '' : 's') + ' to go';
+      ? 'All $3,000.00 back. Done.'
+      : 'of ' + money(TOTAL) + ' put back · ' + weeksLeft + ' Friday' + (weeksLeft === 1 ? '' : 's') + ' to go';
   }
+
+  function pad(n){ return String(n).padStart(2, '0'); }
+  function icsDate(d){ return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()); }
+
+  document.getElementById('icsBtn').addEventListener('click', function(){
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//A&N Ledger//Gift Payback//EN'];
+    schedule.forEach(function(row, i){
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:gift-payback-' + i + '@an-ledger');
+      lines.push('DTSTART;VALUE=DATE:' + icsDate(row.date));
+      lines.push('SUMMARY:Gift payback ' + money(row.amount));
+      lines.push('DESCRIPTION:Week ' + (i + 1) + ' of ' + WEEKS + ' — ' + money(row.amount) + ' due today.');
+      lines.push('BEGIN:VALARM');
+      lines.push('ACTION:DISPLAY');
+      lines.push('DESCRIPTION:Gift payback ' + money(row.amount) + ' due today');
+      lines.push('TRIGGER:PT9H'); // 9am on the day, since DTSTART is midnight for an all-day event
+      lines.push('END:VALARM');
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    var blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'gift-payback-fridays.ics';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
 
   load();
 })();
