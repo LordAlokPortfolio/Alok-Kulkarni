@@ -90,7 +90,7 @@
     transition:width .2s ease;
   }
 
-  button{
+  button, #icsBtn{
     font-family:var(--sans);
     font-size:13px;
     font-weight:600;
@@ -101,7 +101,7 @@
     padding:10px 14px;
     cursor:pointer;
   }
-  button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+  button:focus-visible, #icsBtn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 
   /* calendar */
   .month{margin-bottom:22px}
@@ -200,7 +200,8 @@
     <p class="big" id="restored">$0</p>
     <p class="sub" id="heroSub">of $3,000.00 put back</p>
     <div class="progressBar"><div id="progressFill"></div></div>
-    <button id="icsBtn">Download Friday reminders (.ics)</button>
+    <a id="icsBtn" href="#" style="display:inline-block;text-decoration:none">Add Friday reminders to Calendar</a>
+    <p class="sub" id="icsHint" style="margin-top:6px">Tap the link above — it should offer to add these to your Calendar app directly.</p>
   </div>
 
   <div id="calendar"></div>
@@ -320,14 +321,20 @@
   function pad(n){ return String(n).padStart(2, '0'); }
   function icsDate(d){ return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()); }
 
-  document.getElementById('icsBtn').addEventListener('click', function(){
+  // Set as the link's real href (a data: URI) rather than triggered as a
+  // Blob download — iOS Safari's download-attribute + Blob combination is
+  // unreliable, especially for a page opened straight from Files/iCloud
+  // (file://), and often just does nothing visible. A plain link with a
+  // data:text/calendar href is what iOS actually recognizes and offers to
+  // add straight to Calendar.
+  function buildIcsHref(){
     var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//A&N Ledger//Gift Payback//EN'];
     schedule.forEach(function(row, i){
       lines.push('BEGIN:VEVENT');
       lines.push('UID:gift-payback-' + i + '@an-ledger');
       lines.push('DTSTART;VALUE=DATE:' + icsDate(row.date));
       lines.push('SUMMARY:Gift payback ' + money(row.amount));
-      lines.push('DESCRIPTION:Week ' + (i + 1) + ' of ' + WEEKS + ' — ' + money(row.amount) + ' due today.');
+      lines.push('DESCRIPTION:Week ' + (i + 1) + ' of ' + WEEKS + ' - ' + money(row.amount) + ' due today.');
       lines.push('BEGIN:VALARM');
       lines.push('ACTION:DISPLAY');
       lines.push('DESCRIPTION:Gift payback ' + money(row.amount) + ' due today');
@@ -336,13 +343,10 @@
       lines.push('END:VEVENT');
     });
     lines.push('END:VCALENDAR');
-    var blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = 'gift-payback-fridays.ics';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(lines.join('\r\n') + '\r\n');
+  }
+
+  document.getElementById('icsBtn').href = buildIcsHref();
 
   load();
 })();
